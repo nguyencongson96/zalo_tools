@@ -1,5 +1,5 @@
 // Quét danh sách hội thoại Zalo Web, so với lần trước, ghi log tin mới.
-// Chỉ ĐỌC, không bấm vào hội thoại, không gửi tin.
+// Không bao giờ gửi tin. Đọc danh sách hội thoại; với hội thoại THEO DÕI có tin mới thì mở ra đọc đầy đủ (scripts/chat.js).
 //   node scripts/check.js            -> chạy ẩn (headless)
 //   HEADED=1 node scripts/check.js   -> hiện cửa sổ để debug
 const fs = require('fs');

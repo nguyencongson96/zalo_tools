@@ -3,4 +3,4 @@
 //   node scripts/rebuild.js
 const tracking = require('./tracking');
 const r = tracking.rebuild();
-console.log(`Đã dựng lại data/tracking/index.html: ${r.count} đối tượng, ${r.unread} chưa đọc`);
+console.log(`Đã dựng lại data/tracking/index.html: ${r.count} đối tượng, ${r.unread} tin mới trong 24 giờ`);

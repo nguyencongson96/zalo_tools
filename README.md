@@ -3,11 +3,11 @@
 Công cụ này giúp bạn **không bỏ sót tin nhắn Zalo quan trọng**. Nó tự mở Zalo Web (bản Zalo chạy trên trình duyệt), nhìn vào danh sách hội thoại và cho bạn biết:
 
 - Có tin mới ở đâu, của ai.
-- Tin nào bạn **chưa đọc quá lâu** (mặc định 30 phút) ở những nhóm/khách bạn đánh dấu "cần theo dõi".
+- **Nội dung đầy đủ từng tin mới** (ai nhắn, nhắn gì, lúc mấy giờ) ở những nhóm/khách bạn đánh dấu "cần theo dõi", kể cả khi có hàng chục tin trong vài phút.
 - Tin nào **liên quan đến bạn** (nhắn riêng cho bạn, hoặc nhắc tên bạn trong nhóm).
 - Cuối ngày, một **bản báo cáo tóm tắt** để bạn biết cần xử lý gì.
 
-**Công cụ chỉ ĐỌC danh sách hội thoại. Nó không bấm vào cuộc trò chuyện, không đánh dấu "đã xem", không gửi tin nhắn nào.**
+> **Cần biết trước khi dùng:** để đọc đủ nội dung, công cụ **tự mở** các cuộc trò chuyện trong danh sách theo dõi mỗi khi có tin mới. Việc này khiến Zalo **đánh dấu các tin đó là "đã đọc" trên tài khoản của bạn** và **người gửi sẽ thấy "đã xem"**. Công cụ **không bao giờ gửi tin nhắn** và **chỉ mở những cuộc trò chuyện nằm trong danh sách theo dõi**; các cuộc trò chuyện khác không bị đụng tới. Muốn tắt hành vi này, đặt biến môi trường `NO_OPEN=1` (khi đó chỉ đọc được tin cuối của mỗi hội thoại).
 
 Bạn không cần biết lập trình. Bạn chỉ cần làm theo từng bước bên dưới, sau đó **nói chuyện bằng tiếng Việt với Claude** (trợ lý AI) để nó làm các việc còn lại.
 
@@ -158,8 +158,8 @@ Nếu đã bật quét tự động (mục 8), máy tự quét ngầm; bạn ch�
 **Chỉ cần mở một file:** `data/tracking/index.html` trong thư mục project. **Bấm đúp** vào file để mở bằng trình duyệt (Edge, Chrome...). Nên gắn dấu trang (bookmark) để mở nhanh lần sau.
 
 Trang gồm:
-- **Ô thống kê** ở đầu trang: số đối tượng theo dõi, số đang có tin chưa đọc, số có tin liên quan đến bạn.
-- **Tab "Theo dõi":** mỗi nhóm/người là một dòng. Dòng có tin chưa đọc có vạch đỏ bên trái. Gõ vào ô tìm kiếm hoặc bấm nút lọc ("Chưa đọc", "Liên quan đến tôi") để thu gọn danh sách. **Bấm vào một dòng** để xem lịch sử tin và lần đọc.
+- **Ô thống kê** ở đầu trang: số đối tượng theo dõi, số tin mới trong 24 giờ qua, số tin liên quan đến bạn trong 24 giờ qua.
+- **Tab "Theo dõi":** mỗi nhóm/người là một dòng. Dòng có tin liên quan đến bạn có vạch đỏ bên trái, kèm nhãn "N tin mới" và "N liên quan". Gõ vào ô tìm kiếm hoặc bấm nút lọc ("Có tin mới (24h)", "Liên quan đến tôi") để thu gọn danh sách. **Bấm vào một dòng** để xem toàn bộ tin mới theo thời gian: người gửi, nội dung, giờ nhắn.
 - **Tab "Báo cáo":** các báo cáo cuối ngày, ngày mới nhất ở trên cùng.
 
 Trang tự tải lại mỗi phút (trừ khi bạn đang mở xem chi tiết một dòng hoặc đang gõ tìm kiếm), và hiển thị tốt trên cả điện thoại lẫn chế độ tối.
@@ -218,11 +218,11 @@ Các file nhật ký lỗi (để gửi cho người hỗ trợ nếu cần): `d
 
 ## 11. Quyền riêng tư và an toàn
 
-- Công cụ **chỉ đọc**, không gửi tin, không bấm vào cuộc trò chuyện.
+- Công cụ **không bao giờ gửi tin nhắn**. Nó chỉ **mở** các cuộc trò chuyện trong danh sách theo dõi khi có tin mới, nên Zalo đánh dấu các tin đó là "đã đọc" và người gửi thấy "đã xem" (xem phần đầu tài liệu).
 - Bạn **tự quét QR** bằng điện thoại của mình. Công cụ không bao giờ hỏi mật khẩu Zalo của bạn.
-- Toàn bộ dữ liệu (phiên đăng nhập, nội dung dòng xem trước của tin nhắn, danh sách theo dõi) nằm **trên máy của bạn**, trong thư mục `data/`.
+- Toàn bộ dữ liệu (phiên đăng nhập, nội dung các tin nhắn đã đọc được, danh sách theo dõi) nằm **trên máy của bạn**, trong thư mục `data/`.
 - **Không gửi thư mục `data/` cho ai.** Thư mục `data/profile/` chứa phiên đăng nhập Zalo của bạn: ai có nó có thể vào Zalo của bạn.
-- Khi bạn trò chuyện với Claude hoặc bật báo cáo cuối ngày, **nội dung các dòng xem trước tin nhắn được gửi tới Claude** để phân tích. Nếu bạn không muốn, đừng bật báo cáo và đừng nhờ Claude đọc dữ liệu theo dõi.
+- Khi bạn trò chuyện với Claude hoặc bật báo cáo cuối ngày, **nội dung các tin nhắn được lưu trong `data/` được gửi tới Claude** để phân tích. Nếu bạn không muốn, đừng bật báo cáo và đừng nhờ Claude đọc dữ liệu theo dõi.
 - Hãy dùng công cụ cho tài khoản Zalo của chính bạn và tuân thủ quy định công ty/khách hàng của bạn về việc xử lý tin nhắn.
 
 ---
@@ -244,7 +244,7 @@ Mọi thứ trên đều có thể làm bằng lệnh, chạy từ thư mục g�
 | Bật báo cáo lúc 18:00 | `... -File scripts/schedule.ps1 -Action install-report -At 18:00` |
 | Tắt lịch (`check`, `report` hoặc `all`) | `... -File scripts/schedule.ps1 -Action remove -Target all` |
 
-Thêm `-DryRun` vào các lệnh `schedule.ps1` để chỉ xem trước mà không đăng ký gì. Biến môi trường `UNREAD_ALERT_MIN` (mặc định 30) đổi số phút "chưa đọc quá lâu"; `ZALO_REPORT_BUDGET` (mặc định 1) đổi trần ngân sách USD của mỗi báo cáo.
+Thêm `-DryRun` vào các lệnh `schedule.ps1` để chỉ xem trước mà không đăng ký gì. Biến môi trường `NO_OPEN=1` tắt việc tự mở hội thoại (chỉ đọc danh sách); `UNREAD_ALERT_MIN` (mặc định 30) đổi ngưỡng cảnh báo "chưa đọc quá lâu", nhưng vì công cụ tự mở hội thoại theo dõi nên cảnh báo này hầu như không còn kích hoạt; `ZALO_REPORT_BUDGET` (mặc định 1) đổi trần ngân sách USD của mỗi báo cáo.
 
 **Cấu trúc thư mục**
 

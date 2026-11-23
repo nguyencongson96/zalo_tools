@@ -7,7 +7,7 @@ description: Quản lý danh sách đối tượng Zalo cần theo dõi (data/wa
 
 > Đường dẫn trong skill này tính từ gốc project `zalo_tools` (thư mục có `package.json`, `scripts/` và `.claude/skills`).
 
-Chỉ các hội thoại nằm trong `data/watchlist.json` mới được gắn cờ `[THEO DÕI]`, vào bảng `data/tracking/` và được cảnh báo "chưa đọc quá lâu". Hội thoại ngoài danh sách vẫn được quét nhưng không được ghi vào bảng.
+Chỉ các hội thoại nằm trong `data/watchlist.json` mới được gắn cờ `[THEO DÕI]`, vào bảng `data/tracking/` và được tự mở để đọc đầy đủ khi có tin mới (Zalo sẽ đánh dấu các tin đó là đã đọc, người gửi thấy "đã xem"). Hội thoại ngoài danh sách vẫn được quét nhưng không được ghi vào bảng.
 
 ## Hai file cấu hình
 

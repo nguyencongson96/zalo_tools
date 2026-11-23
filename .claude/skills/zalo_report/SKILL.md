@@ -19,7 +19,7 @@ description: Lập báo cáo từ dữ liệu theo dõi Zalo đã thu thập (tr
 | File | Nội dung |
 |---|---|
 | `data/tracking/index.html` | Bảng tổng hợp (HTML); dòng phụ đề đầu trang có "Cập nhật lúc" (giờ máy). Đây là trang HTML cho người xem; để phân tích nên đọc `.data.json` bên dưới |
-| `data/tracking/.data.json` | Dữ liệu có cấu trúc theo từng đối tượng: `name`, `isGroup`, `unread`, `unreadCount`, `muted`, `last`, `lastRead`, `history[]` (tối đa 50 mục: `type` = `msg` hoặc `read`, `from`, `text`, `truncated`, `at`, `waitedMin`) |
+| `data/tracking/.data.json` | Dữ liệu có cấu trúc theo từng đối tượng: `name`, `isGroup`, `unread`, `unreadCount`, `muted`, `last`, `lastRead`, `lastMsgTs`, `history[]` (tối đa 200 mục, mới nhất trước: `type` = `msg` hoặc `read`; tin có `id`, `at` (giờ nhắn thật), `from` (`me` = người dùng, `them` = người kia trong chat riêng, hoặc tên người gửi trong nhóm), `text`, `kind` (`text`/`sticker`/`photo`/`file`/...), `rel`, `why`; mục `read` có `waitedMin`). `unread`/`unreadCount` luôn gần như 0 với hội thoại theo dõi vì công cụ tự mở chúng |
 | `data/log/new_messages.jsonl`, `data/log/read_events.jsonl`, `data/log/overdue.jsonl` | Nhật ký sự kiện |
 | `data/me.json` | Tên và từ khóa của người dùng |
 | `data/watchlist.json` | Các đối tượng đang theo dõi |
@@ -46,10 +46,10 @@ Mọi mốc thời gian `at` trong file là ISO UTC (kết thúc bằng `Z`): **
 _Dữ liệu cập nhật lúc HH:mm_  [kèm cảnh báo nếu dữ liệu cũ]
 
 ## Tóm tắt
-- N tin mới trong khung; M hội thoại đang chưa đọc; K tin liên quan tới bạn.
+- N tin mới trong khung; M hội thoại có tin mới; K tin liên quan tới bạn.
 
 ## Cần xử lý ngay
-(chưa đọc và liên quan; sắp xếp theo mức khẩn; mỗi mục: tên hội thoại, người gửi, nội dung, vì sao liên quan)
+(mới và liên quan; sắp xếp theo mức khẩn; mỗi mục: tên hội thoại, người gửi, nội dung, vì sao liên quan)
 
 ## Đã đọc nhưng nên theo dõi
 (liên quan, đã đọc, có việc chưa rõ đã xử lý hay chưa)
@@ -60,7 +60,7 @@ _Dữ liệu cập nhật lúc HH:mm_  [kèm cảnh báo nếu dữ liệu cũ]
 ## Giới hạn dữ liệu
 ```
 
-"Giới hạn dữ liệu" luôn có, nêu những điều sau khi đúng: nội dung chỉ từ dòng xem trước nên có thể bị cắt; chỉ gồm đối tượng trong `data/watchlist.json`; lịch sử bắt đầu từ lúc bắt đầu theo dõi và tối đa 50 mục mỗi đối tượng; tin đến trước lần quét đầu tiên không có; các khoảng thời gian máy tắt hoặc chưa quét bị trống; đánh giá liên quan là nhận định, không phải sự thật.
+"Giới hạn dữ liệu" luôn có, nêu những điều sau khi đúng: hội thoại theo dõi có nội dung đầy đủ từng tin (công cụ tự mở hội thoại để đọc, nên Zalo coi là đã đọc, cờ "chưa đọc" không phản ánh việc người dùng đã đọc), hội thoại không đọc được thì chỉ có dòng xem trước có thể bị cắt; ảnh/sticker/tệp chỉ hiện nhãn, không có nội dung; chỉ gồm đối tượng trong `data/watchlist.json`; lịch sử bắt đầu từ lúc bắt đầu theo dõi và tối đa 200 mục mỗi đối tượng; tin đến trước lần quét đầu tiên không có; các khoảng thời gian máy tắt hoặc chưa quét bị trống; đánh giá liên quan là nhận định, không phải sự thật.
 
 Không có tin nào trong khung: nói thẳng "không có tin mới" kèm thời điểm dữ liệu, đừng kéo dài báo cáo.
 

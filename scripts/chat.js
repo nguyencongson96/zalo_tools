@@ -83,13 +83,25 @@ function extractMessages(page, isGroup) {
       const mtc = it.querySelector('[id^="mtc-"]');
       let text = mtc ? nb(mtc.textContent) : '';
       let kind = 'text';
+      let hint = '';
       if (!text) {
         if (it.querySelector('.sticker-message')) { kind = 'sticker'; text = '[Sticker]'; }
         else if (it.querySelector('.photo-message-v2, .img-msg-v2')) { kind = 'photo'; text = '[Hình ảnh]'; }
-        else { kind = 'other'; text = '[Tệp hoặc nội dung khác]'; }
+        else {
+          const ma = it.querySelector('.message-action') || it;
+          const cls = new Set();
+          ma.querySelectorAll('[class]').forEach((e) => String(e.className).split(/s+/).forEach((c) => c && cls.add(c)));
+          const all = [...cls].join(' ');
+          hint = [...cls].filter((c) => !/^(flx|rel|abs|fa-|message-reaction|msg-reaction|reaction|emoji|react|card-send-time|floating)/.test(c)).slice(0, 10).join(' ');
+          if (/file|attach|document/i.test(all)) { kind = 'file'; text = '[Tệp đính kèm]'; }
+          else if (/video/i.test(all)) { kind = 'video'; text = '[Video]'; }
+          else if (/voice|audio/i.test(all)) { kind = 'voice'; text = '[Tin nhắn thoại]'; }
+          else if (/call/i.test(all)) { kind = 'call'; text = '[Cuộc gọi]'; }
+          else { kind = 'other'; text = '[Nội dung khác]'; }
+        }
       }
       out.push({
-        ts, kind, text,
+        ts, kind, text, hint,
         from: me ? 'me' : (isGroup ? (lastSender || 'unknown') : 'them'),
       });
     }
