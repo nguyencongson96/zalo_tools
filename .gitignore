@@ -1,0 +1,3 @@
+node_modules/
+# dữ liệu cá nhân (phiên đăng nhập, tin nhắn, cấu hình của từng người dùng): không đưa lên git
+data/
