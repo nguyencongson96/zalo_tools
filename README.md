@@ -39,7 +39,7 @@ Bạn không cần biết lập trình. Bạn chỉ cần làm theo từng bư�
 | **Trình duyệt Microsoft Edge** | Windows 10/11 có sẵn, không cần cài. |
 | **Tài khoản Claude** (claude.ai) | Để dùng trợ lý Claude hướng dẫn và điều khiển công cụ. Cần gói có dùng được **Claude Code** (tính năng "Code" trong ứng dụng Claude). Xem mục 2.2. |
 
-Các phần mềm cần cài (mục 2): **Node.js** và **ứng dụng Claude** (Claude desktop app). Cả hai đều miễn phí để cài; riêng Claude cần tài khoản.
+Các phần mềm cần cài (mục 2): **Node.js**, **Git** và **ứng dụng Claude** (Claude desktop app). Cả ba đều miễn phí để cài; riêng Claude cần tài khoản.
 
 ---
 
@@ -68,20 +68,45 @@ Node.js là "động cơ" để chạy các tập lệnh của project. Phiên b
 >
 > Bạn cần dùng phần **Claude Code** của ứng dụng (thường là tab **Code**), không phải khung chat thường. Chỉ phần Code mới mở được thư mục trên máy bạn và chạy được các skill của project. Giao diện có thể thay đổi theo từng phiên bản ứng dụng; nếu không thấy tab Code, hãy cập nhật ứng dụng lên bản mới nhất hoặc kiểm tra gói đăng ký của bạn.
 
+### 2.3. Cài Git (để tải project và cập nhật)
+
+1. Vào https://git-scm.com/download/win — trình duyệt sẽ tự tải bản cài cho Windows (hoặc bấm **Click here to download** nếu không tự tải).
+2. Mở file vừa tải về, bấm **Next** liên tục và để mọi lựa chọn mặc định, cuối cùng bấm **Install** rồi **Finish**.
+3. **Kiểm tra:** mở **Windows PowerShell** (nhấn `Windows`, gõ `PowerShell`), gõ lệnh sau rồi nhấn Enter:
+   ```
+   git --version
+   ```
+   Nếu hiện dạng `git version 2.x.x` là thành công. Nếu báo "not recognized", hãy **khởi động lại máy** rồi thử lại.
+
 ---
 
 ## 3. Tải project và cài thư viện
 
-### 3.1. Lấy project về máy
+### 3.1. Tải project về máy bằng Git
 
-- Giải nén file .zip nhận được vào một thư mục dễ nhớ, ví dụ `D:\zalo_tools`. Tránh đặt trong thư mục có dấu tiếng Việt hoặc quá sâu.
+1. Chọn nơi đặt project: một thư mục dễ nhớ, không có dấu tiếng Việt trong đường dẫn và không quá sâu (ví dụ ổ `D:\`).
+2. Nhấn phím `Windows`, gõ `PowerShell`, mở **Windows PowerShell**.
+3. Gõ lần lượt hai lệnh sau, mỗi lệnh nhấn Enter:
+   ```
+   cd D:\
+   git clone https://github.com/nguyencongson96/zalo_tools.git
+   ```
+   (Nếu muốn đặt ở ổ khác, đổi `D:\` thành ổ đó, ví dụ `C:\`.)
+4. Git sẽ tạo thư mục `zalo_tools` (ví dụ `D:\zalo_tools`) chứa toàn bộ project. Các bước sau dùng thư mục này.
+
+**Cập nhật phiên bản mới sau này:** mở PowerShell, vào thư mục project rồi chạy `git pull`:
+```
+cd D:\zalo_tools
+git pull
+```
+Dữ liệu cá nhân của bạn (phiên đăng nhập, tin nhắn đã lưu, danh sách theo dõi) nằm trong thư mục `data/` và **không bị ghi đè** khi cập nhật. Sau khi cập nhật, nếu có thay đổi về thư viện, chạy lại `npm install` (mục 3.3).
 
 > **Quan trọng:** sau khi bật chạy tự động (mục 8), **đừng di chuyển hay đổi tên thư mục này** nữa. Nếu lỡ di chuyển, hãy bảo Claude cài lại lịch tự động.
 
 ### 3.2. Mở project trong ứng dụng Claude
 
 1. Mở ứng dụng Claude, chuyển sang tab **Code**.
-2. Chọn thư mục project (**Select folder** hoặc tương tự) và chọn thư mục `zalo_tools` bạn vừa giải nén.
+2. Chọn thư mục project (**Select folder** hoặc tương tự) và chọn thư mục `zalo_tools` bạn vừa tải về ở mục 3.1 (ví dụ `D:zalo_tools`).
 3. Nếu ứng dụng hỏi có tin tưởng thư mục này không, hoặc xin quyền đọc/chạy lệnh trong thư mục, hãy đồng ý cho thư mục `zalo_tools`. Công cụ cần quyền này để chạy các lệnh quét.
 4. Khung chat hiện ra là nơi bạn gõ các lệnh `/zalo_...` ở các mục sau.
 
@@ -205,6 +230,9 @@ Cách nhanh nhất: **chép nguyên thông báo lỗi dán cho Claude** và nh�
 |---|---|---|
 | Quét báo lỗi "phiên hết hạn" hoặc dữ liệu đứng yên | Zalo yêu cầu quét lại QR (lâu không dùng, đăng xuất từ điện thoại, đổi thiết bị) | Gõ `/zalo_login` |
 | `node` hoặc `npm` "not recognized" | Chưa cài Node.js hoặc chưa khởi động lại máy sau khi cài | Cài lại theo mục 2.1, khởi động lại máy |
+| `git` "not recognized" | Chưa cài Git hoặc chưa khởi động lại máy sau khi cài | Cài theo mục 2.3, khởi động lại máy |
+| `git clone` báo "Authentication failed", "not found" hoặc đòi đăng nhập GitHub | Bạn chưa có quyền truy cập kho project, hoặc địa chỉ gõ sai | Kiểm tra lại địa chỉ; nếu kho ở chế độ riêng tư, nhờ người quản lý cấp quyền cho tài khoản GitHub của bạn rồi đăng nhập khi được hỏi |
+| `git pull` báo "error: Your local changes ... would be overwritten" | Bạn đã tự sửa file của project | Nhờ Claude: *"xử lý lỗi git pull giúp tôi"* (đừng tự xóa thư mục `data/`) |
 | Lỗi liên quan "profile đang được dùng" / không mở được trình duyệt | Đang mở cửa sổ đăng nhập Zalo của công cụ trong khi quét | Đóng cửa sổ Edge của công cụ rồi thử lại. Không chạy 2 thao tác Zalo cùng lúc |
 | Quét xong nhưng không thấy ai trong bảng | Chưa thêm ai vào danh sách theo dõi | Gõ `/zalo_watchlist` |
 | Không có "báo cáo cuối ngày" | Chưa bật, hoặc máy tắt đúng giờ báo cáo | Gõ `/zalo_schedule` để xem trạng thái |
