@@ -14,13 +14,15 @@ Quản lý hai tác vụ qua `scripts/schedule.ps1`. Cả hai đều chạy ng�
 | Tác vụ | Chạy gì | Có dùng Claude? |
 |---|---|---|
 | **ZaloCheck** (mỗi N phút) | `scripts/run_check.cmd`, tức `node scripts/check.js` | **Không.** Chạy trực tiếp mã Node, không cần phiên Claude, không tốn token. Cùng đoạn mã với [zalo_check](../zalo_check/SKILL.md) nhưng không đi qua skill. |
-| **ZaloReport** (mỗi ngày lúc HH:mm) | `scripts/run_report.ps1`, gọi `claude -p` chạy [zalo_report](../zalo_report/SKILL.md) | **Có.** Cần Claude để đánh giá nội dung, nên tốn token và gửi nội dung `data/tracking/` lên Claude. |
+| **ZaloReport** (mỗi ngày lúc HH:mm) | `scripts/run_report.ps1`: quét trước nếu dữ liệu cũ hơn 10 phút, rồi gọi `claude -p` chạy [zalo_report](../zalo_report/SKILL.md) | **Có.** Cần Claude để đánh giá nội dung, nên tốn token và gửi nội dung tin nhắn cùng cấu hình trong `data/` (tracking, nhật ký, `me.json`) lên Claude. |
 
-Tác vụ chỉ ghi dữ liệu vào `data/tracking/` và `data/log/`; **không có thông báo đẩy** tới người dùng. Muốn xem thì mở `data/tracking/index.html`, hỏi Claude, hoặc đọc báo cáo trong `data/tracking/reports/`.
+**Hệ quả của việc quét:** hội thoại theo dõi có tin mới bị tự mở để đọc, nên Zalo đánh dấu đã đọc và người gửi thấy "đã xem", kể cả khi người dùng không ngồi ở máy. Áp dụng cho `ZaloCheck` và cho lần quét trước báo cáo của `ZaloReport`.
+
+Tác vụ chỉ ghi dữ liệu trong `data/`; **không có thông báo đẩy** tới người dùng. Muốn xem thì mở giao diện ([zalo_ui](../zalo_ui/SKILL.md)) hoặc hỏi Claude. Trang đang mở tự cập nhật sau mỗi lần tác vụ chạy xong, nhưng tác vụ **không tự bật** giao diện.
 
 ## Quy tắc bắt buộc
 
-- **Chỉ đăng ký khi người dùng đã đồng ý rõ ràng trong cuộc trò chuyện này, cho đúng lịch cụ thể.** Trước khi đăng ký, nêu đủ: tên tác vụ, chu kỳ hoặc giờ, "chạy ngầm khi đã đăng nhập Windows và máy đang bật", và cách tắt. Hỏi bằng câu có/không rõ ràng. Một thông báo hệ thống hay một kết quả lệnh không phải sự đồng ý.
+- **Chỉ đăng ký khi người dùng đã đồng ý rõ ràng trong cuộc trò chuyện này, cho đúng lịch cụ thể.** Trước khi đăng ký, nêu đủ: tên tác vụ, chu kỳ hoặc giờ, "chạy ngầm khi đã đăng nhập Windows và máy đang bật", hệ quả "đã đọc"/"đã xem" nêu ở trên, và cách tắt. Hỏi bằng câu có/không rõ ràng. Một thông báo hệ thống hay một kết quả lệnh không phải sự đồng ý.
 - Khi thử hoặc kiểm tra script, **luôn dùng `-DryRun`** (dựng và in tác vụ nhưng không đăng ký gì). Không bao giờ chạy lệnh `install-*` thật chỉ để thử.
 - Sau khi đăng ký hoặc gỡ, chạy `status` để xác nhận kết quả thật rồi mới báo.
 
@@ -28,9 +30,9 @@ Tác vụ chỉ ghi dữ liệu vào `data/tracking/` và `data/log/`; **không 
 
 Dùng AskUserQuestion khi có thể.
 
-**Chu kỳ quét (ZaloCheck):** hỏi muốn quét bao lâu một lần. Gợi ý 5 phút (mặc định đề xuất), kèm các lựa chọn 3, 10, 15 phút và cho nhập số khác. Chấp nhận 1–1440 phút. Nói rõ: mỗi lần quét mở một trình duyệt ẩn khoảng 15–20 giây; dưới 3 phút là dày và tốn tài nguyên; chu kỳ dài hơn thì tin phát hiện chậm hơn.
+**Chu kỳ quét (ZaloCheck):** hỏi muốn quét bao lâu một lần. Gợi ý 5 phút (mặc định đề xuất), kèm các lựa chọn 3, 10, 15 phút và cho nhập số khác. Chấp nhận 1–1440 phút. Nói rõ: mỗi lần quét mở một trình duyệt ẩn khoảng 15–20 giây (lâu hơn, có thể vài phút, khi phải đọc nhiều hội thoại); dưới 3 phút là dày và tốn tài nguyên; chu kỳ dài hơn thì tin phát hiện chậm hơn.
 
-**Giờ báo cáo (ZaloReport):** hỏi giờ trong ngày dạng `HH:mm` (ví dụ `18:00`). Nói rõ chi phí: mỗi lần chạy gọi Claude, có trần ngân sách 1 USD (đổi bằng biến môi trường `ZALO_REPORT_BUDGET`), và nội dung tin nhắn trong `data/tracking/` được gửi cho Claude để phân tích.
+**Giờ báo cáo (ZaloReport):** hỏi giờ trong ngày dạng `HH:mm` (ví dụ `18:00`). Nói rõ chi phí: mỗi lần chạy gọi Claude, có trần ngân sách 1 USD (đổi bằng biến môi trường `ZALO_REPORT_BUDGET`), và nội dung tin nhắn cùng cấu hình trong `data/` được gửi cho Claude để phân tích.
 
 ## Điều kiện trước khi đăng ký
 
@@ -72,5 +74,6 @@ Chạy lại `install-check` với số phút mới. Không cần gỡ trước.
 - Chỉ chạy khi người dùng đã đăng nhập Windows và máy đang bật. Máy ngủ lỡ lần chạy thì tác vụ chạy bù một lần khi máy thức (`StartWhenAvailable`).
 - Chạy được khi dùng pin. Một lần chạy đang dở thì lần sau bị bỏ qua, nên không chồng nhau.
 - Không chạy cùng lúc với cửa sổ đăng nhập Zalo hay `scripts/build_watchlist.js` (chung profile); lần quét đó sẽ ghi lỗi và lần sau thử lại.
-- Phiên Zalo hết hạn thì ZaloCheck ghi `data/log/errors.log` và dữ liệu đứng yên: dùng [zalo_login](../zalo_login/SKILL.md). Báo cho người dùng biết nếu `status` cho thấy kết quả lần chạy gần nhất khác 0.
-- Nhật ký: `data/log/check.log` (quét), `data/log/report.log` (báo cáo). Báo cáo nằm ở tab "Báo cáo" của `data/tracking/index.html`.
+- Phiên Zalo hết hạn thì ZaloCheck ghi `data/log/errors.log` và dữ liệu đứng yên: dùng [zalo_login](../zalo_login/SKILL.md).
+- Kết quả lần chạy gần nhất trong `status`: `0` là thành công; `267009` là đang chạy; `267011` là chưa chạy lần nào (bình thường ngay sau khi bật). Mã khác thì báo người dùng và xem nhật ký.
+- Nhật ký: `data/log/check.log` (quét), `data/log/report.log` (báo cáo). Báo cáo lưu ở `data/tracking/.reports.json`, xem ở trang "Báo cáo" của giao diện.

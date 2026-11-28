@@ -1,23 +1,7 @@
-// Dựng trang HTML để người dùng mở bằng trình duyệt (không cần app đọc Markdown).
-//   esc(s)         - escape ký tự HTML (mọi nội dung tin nhắn đều phải qua đây)
-//   page({...})    - bọc nội dung vào trang HTML hoàn chỉnh lấy từ scripts/template.html (CSS + JS nội tuyến, sáng/tối tự động)
-//   mdToHtml(md)   - chuyển Markdown đơn giản (báo cáo do Claude viết) sang HTML, không cho chèn HTML thô
-const fs = require('fs');
-const path = require('path');
+// Chuyển Markdown đơn giản (báo cáo do Claude viết) sang HTML cho giao diện, không cho chèn HTML thô.
+//   esc(s)         - escape ký tự HTML
+//   mdToHtml(md)   - tiêu đề, danh sách, bảng, trích dẫn, đậm/nghiêng/code, liên kết http(s)
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
-// Giao diện (CSS + JS + khung HTML) nằm ở scripts/template.html: sửa giao diện ở đó, đừng sửa trong code.
-// Template có hai chỗ giữ chỗ: {{TITLE}} và {{BODY}}. Chú thích hướng dẫn đầu file được bỏ khi dựng trang.
-const TEMPLATE_FILE = path.join(__dirname, 'template.html');
-
-function page({ title, body }) {
-  let tpl;
-  try { tpl = fs.readFileSync(TEMPLATE_FILE, 'utf8'); }
-  catch (e) { throw new Error(`Không đọc được template giao diện ${TEMPLATE_FILE}: ${e.message}`); }
-  tpl = tpl.replace(/<!--[\s\S]*?-->\n?/, '');           // bỏ chú thích hướng dẫn (chỉ chú thích đầu tiên)
-  if (!tpl.includes('{{BODY}}')) throw new Error(`${TEMPLATE_FILE} thiếu chỗ giữ chỗ {{BODY}}`);
-  return tpl.replace('{{TITLE}}', () => esc(title)).replace('{{BODY}}', () => body);
-}
 
 // ---- Markdown -> HTML (tập con: tiêu đề, danh sách, bảng, trích dẫn, đậm/nghiêng/code, liên kết) ----
 function inline(src) {
@@ -70,11 +54,11 @@ function mdToHtml(md) {
       }
       out.push(`<${ordered ? 'ol' : 'ul'}>${items.join('')}</${ordered ? 'ol' : 'ul'}>`); continue;
     }
-    const buf = [];
+    const buf = [lines[i++]]; // luôn nhận dòng hiện tại (vd dòng "|" không thành bảng) để vòng lặp tiến lên
     while (i < lines.length && lines[i].trim() && !/^(#{1,6}\s|>|\||```|\s*([-*]|\d+[.)])\s+)/.test(lines[i])) buf.push(lines[i++]);
     out.push(`<p>${buf.map(inline).join('<br>')}</p>`);
   }
   return out.join('\n');
 }
 
-module.exports = { esc, page, mdToHtml };
+module.exports = { esc, mdToHtml };

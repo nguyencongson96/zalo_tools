@@ -1,4 +1,4 @@
-# Bao cao Zalo cuoi ngay: goi Claude (claude -p) chay skill zalo_report, dua vao tab "Bao cao" cua data\tracking\index.html.
+# Bao cao Zalo cuoi ngay: goi Claude (claude -p) chay skill zalo_report, luu vao trang "Bao cao" cua giao dien.
 # Duoc Task Scheduler goi (tac vu ZaloReport) qua run_hidden.vbs. Co the chay tay:  powershell -File run_report.ps1
 #   -DryRun : chi in ra se lam gi, KHONG goi Claude
 # Claude chi duoc cap quyen DOC (Read, Glob, Grep, Skill) va gioi han ngan sach; file bao cao do script nay ghi.
@@ -39,13 +39,18 @@ if (-not $claude) {
 }
 
 $today = Get-Date -Format 'yyyy-MM-dd'
-$outFile = Join-Path $root 'data\tracking\index.html'   # bao cao duoc dua vao tab "Bao cao" cua trang nay
+$outFile = Join-Path $root 'data\tracking\.reports.json'   # save_report.js ghi file nay, giao dien doc tu day
 $prompt = "Run the zalo_report skill in NON-INTERACTIVE mode for today ($today). Read-only: do not scan Zalo and do not ask questions. " +
           "Print ONLY the final report as Markdown in Vietnamese to stdout."
-$claudeArgs = @('-p', $prompt, '--allowedTools', 'Read,Glob,Grep,Skill', '--max-budget-usd', $budget, '--output-format', 'text')
+# Noi dung tin Zalo la du lieu khong tin cay: --tools gioi han cong cu co san (allowedTools chi duyet truoc,
+# khong chan cac quyen da cho trong settings), --strict-mcp-config khong nap MCP server nao.
+$readTools = 'Read,Glob,Grep,Skill'
+$claudeArgs = @('-p', $prompt, '--tools', $readTools, '--allowedTools', $readTools, '--strict-mcp-config',
+                '--max-budget-usd', $budget, '--output-format', 'text')
 
-$index = Join-Path $root 'data\tracking\index.html'
-$needScan = (-not (Test-Path $index)) -or (((Get-Date) - (Get-Item $index).LastWriteTime).TotalMinutes -gt $staleMin)
+# do tuoi du lieu theo .data.json: chi lan quet (check.js) ghi file nay, save_report.js thi khong
+$dataFile = Join-Path $root 'data\tracking\.data.json'
+$needScan = (-not (Test-Path $dataFile)) -or (((Get-Date) - (Get-Item $dataFile -Force).LastWriteTime).TotalMinutes -gt $staleMin)
 
 if ($DryRun) {
   Write-Host "claude    : $claude"
@@ -58,9 +63,10 @@ if ($DryRun) {
 
 try {
   if ($needScan) {
-    Push-Location $root
-    try { & node scripts/check.js *> $null } catch { Write-Log "Canh bao: quet truoc bao cao loi: $($_.Exception.Message)" }
-    Pop-Location
+    # Goi qua run_check.cmd (tu ghi data\log\check.log). KHONG chuyen huong stderr cua node trong PowerShell:
+    # voi ErrorActionPreference=Stop, mot dong canh bao cung huy loi goi va tat node giua chung.
+    & (Join-Path $here 'run_check.cmd')
+    if ($LASTEXITCODE -ne 0) { Write-Log "Canh bao: quet truoc bao cao loi (ma $LASTEXITCODE), xem data\log\check.log. Bao cao dung du lieu cu." }
   }
   Push-Location $root
   try { $text = ($null | & $claude @claudeArgs) -join "`n" } finally { Pop-Location }
@@ -68,7 +74,7 @@ try {
     Write-Log "LOI: claude tra ve ma $LASTEXITCODE hoac rong."
     exit 1
   }
-  # Claude tra ve Markdown; save_report.js doi sang trang HTML de nguoi dung mo bang trinh duyet
+  # Claude tra ve Markdown; save_report.js luu vao kho bao cao de giao dien hien thi
   $tmp = Join-Path ([IO.Path]::GetTempPath()) "zalo_report_$today.md"
   [IO.File]::WriteAllText($tmp, $text + "`n", (New-Object Text.UTF8Encoding($false)))
   try {

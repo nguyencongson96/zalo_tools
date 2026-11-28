@@ -10,4 +10,6 @@ If LCase(Right(target, 4)) = ".ps1" Then
 Else
   cmd = "cmd /c """ & dir & "\" & target & """"
 End If
-CreateObject("WScript.Shell").Run cmd, 0, False
+' Cho tien trinh chay xong va tra ve dung ma thoat, de Task Scheduler biet ket qua that,
+' va de "khong chay chong" cung gioi han thoi gian cua tac vu ap dung cho ca lan quet.
+WScript.Quit CreateObject("WScript.Shell").Run(cmd, 0, True)

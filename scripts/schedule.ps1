@@ -54,14 +54,15 @@ switch ($Action) {
     if ($Minutes -lt 1 -or $Minutes -gt 1440) { throw 'Minutes phai tu 1 den 1440.' }
     $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) `
       -RepetitionInterval (New-TimeSpan -Minutes $Minutes) -RepetitionDuration (New-TimeSpan -Days 3650)
-    Register-Zalo $CheckTask 'run_check.cmd' $trigger (New-Settings 4) 'Quet Zalo Web va cap nhat data/tracking/index.html'
+    # gioi han rong: moi lan quet co the mo toi 25 hoi thoai; bi cat giua chung se mat noi dung tin da mo
+    Register-Zalo $CheckTask 'run_check.cmd' $trigger (New-Settings 20)'Quet Zalo Web va cap nhat du lieu theo doi'
     if (-not $DryRun) { Write-Host "Da bat quet tu dong moi $Minutes phut (task: $CheckTask)." }
   }
   'install-report' {
     try { $time = [datetime]::ParseExact($At, 'HH:mm', [Globalization.CultureInfo]::InvariantCulture) }
     catch { throw "At phai co dang HH:mm, vi du 18:00 (nhan duoc: '$At')." }
     $trigger = New-ScheduledTaskTrigger -Daily -At $time
-    Register-Zalo $ReportTask 'run_report.ps1' $trigger (New-Settings 15) 'Bao cao Zalo cuoi ngay (claude -p, skill zalo_report)'
+    Register-Zalo $ReportTask 'run_report.ps1' $trigger (New-Settings 35)'Bao cao Zalo cuoi ngay (claude -p, skill zalo_report)'
     if (-not $DryRun) { Write-Host "Da bat bao cao hang ngay luc $At (task: $ReportTask)." }
   }
   'remove' {
