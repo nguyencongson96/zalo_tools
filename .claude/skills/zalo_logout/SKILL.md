@@ -19,7 +19,7 @@ Nếu người dùng **chỉ muốn tắt lịch** mà vẫn giữ dữ liệu: 
 node scripts/logout.js
 ```
 
-2. **Hỏi xác nhận rõ ràng** (AskUserQuestion), nêu đúng danh sách vừa in và nói việc xóa là **không hoàn tác**. Hỏi thêm:
+2. **Hỏi xác nhận rõ ràng** (AskUserQuestion), nêu đúng danh sách vừa in, nói thêm rằng hai tác vụ `ZaloCheck`/`ZaloReport` sẽ bị gỡ (bản xem trước không in mục này) và việc xóa là **không hoàn tác**. Hỏi thêm:
    - Đổi sang tài khoản khác: xóa hết kể cả `data/watchlist.json`, `data/me.json` (cấu hình của tài khoản cũ).
    - Chỉ đăng xuất, muốn giữ cấu hình: thêm `--keep-config`.
    Không xóa nếu người dùng chưa đồng ý trong cuộc trò chuyện này.

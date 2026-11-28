@@ -70,7 +70,7 @@ function mdToHtml(md) {
       }
       out.push(`<${ordered ? 'ol' : 'ul'}>${items.join('')}</${ordered ? 'ol' : 'ul'}>`); continue;
     }
-    const buf = [];
+    const buf = [lines[i++]]; // luôn nhận dòng hiện tại (vd dòng "|" không thành bảng) để vòng lặp tiến lên
     while (i < lines.length && lines[i].trim() && !/^(#{1,6}\s|>|\||```|\s*([-*]|\d+[.)])\s+)/.test(lines[i])) buf.push(lines[i++]);
     out.push(`<p>${buf.map(inline).join('<br>')}</p>`);
   }

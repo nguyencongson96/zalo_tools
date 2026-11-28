@@ -2,16 +2,19 @@
 // Không bao giờ gửi tin. Đọc danh sách hội thoại; với hội thoại THEO DÕI có tin mới thì mở ra đọc đầy đủ (scripts/chat.js).
 //   node scripts/check.js            -> chạy ẩn (headless)
 //   HEADED=1 node scripts/check.js   -> hiện cửa sổ để debug
+//   node scripts/check.js --verify   -> chỉ kiểm tra đăng nhập: đọc danh sách, KHÔNG mở hội thoại, không ghi state/tracking
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright-core');
 const cfg = require('./config');
 const tracking = require('./tracking');
 const chat = require('./chat');
+const { readJson, writeJson } = require('./store');
+const { scrollThrough } = require('./list');
 
+const MAX_GAP_TRIES = 3; // số lần đọc lại một hội thoại khi chưa tải được tin cũ tới mốc đã đọc
 const WATCHLIST_FILE = cfg.watchlistFile; // tùy chọn: ["Tên A", "Tên B"]
 const now = () => new Date().toISOString();
-const readJson = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } };
 
 // Đọc các hàng đang được vẽ trên màn hình (danh sách virtualized: chỉ ~14 hàng/lần)
 async function readVisible(page) {
@@ -46,42 +49,25 @@ async function readVisible(page) {
   });
 }
 
-// Cuộn hết danh sách để gom mọi hội thoại. Phần tử cuộn là một phần tử cha của #conversationList.
+// Cuộn hết danh sách để gom mọi hội thoại (cách cuộn: scripts/list.js)
 async function scrape(page) {
   await page.waitForSelector('#conversationList .msg-item', { timeout: 30000 });
   await page.waitForTimeout(3000); // chờ danh sách ổn định
   const all = new Map();
-  const grab = async () => { for (const r of await readVisible(page)) all.set(`${r.name}|${r.uid}`, r); };
-  const scroll = (to) => page.evaluate((to) => {
-    let el = document.querySelector('#conversationList');
-    while (el && el !== document.body) {
-      const oy = getComputedStyle(el).overflowY;
-      if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight + 5) break;
-      el = el.parentElement;
-    }
-    if (!el || el === document.body) return { ok: false };
-    const before = el.scrollTop;
-    el.scrollTop = to === 'top' ? 0 : before + Math.max(200, el.clientHeight * 0.6);
-    return { ok: true, moved: el.scrollTop !== before };
-  }, to);
-
-  await scroll('top');
-  await page.waitForTimeout(500);
-  let idle = 0; // số lần liên tiếp chạm đáy mà không có hội thoại mới (Zalo tải thêm khi cuộn tới đáy)
-  for (let i = 0; i < 120 && idle < 3; i++) {
-    const sizeBefore = all.size;
-    await grab();
-    const s = await scroll('down');
-    if (!s.ok) break;
-    await page.waitForTimeout(s.moved ? 500 : 1500);
-    if (!s.moved) { await grab(); idle = all.size > sizeBefore ? 0 : idle + 1; }
-  }
-  await grab();
-  await scroll('top');
+  const grab = async () => { for (const r of await readVisible(page)) all.set(`${r.name}|${r.uid}`, r); return all.size; };
+  await scrollThrough(page, grab);
   return [...all.values()];
 }
 
 (async () => {
+  const args = process.argv.slice(2);
+  // gõ sai tham số mà vẫn quét thường thì sẽ mở hội thoại ngoài ý muốn -> dừng luôn
+  const unknown = args.filter((a) => a !== '--verify');
+  if (unknown.length) {
+    console.error(`Tham số không hợp lệ: ${unknown.join(' ')}. Chỉ hỗ trợ --verify.`);
+    process.exitCode = 1;
+    return;
+  }
   fs.mkdirSync(cfg.logDir, { recursive: true });
   const ctx = await chromium.launchPersistentContext(cfg.profileDir, {
     channel: cfg.channel,
@@ -106,8 +92,16 @@ async function scrape(page) {
       return;
     }
 
+    if (args.includes('--verify')) {
+      console.log(`${now()} Đăng nhập OK: đọc được ${rows.length} hội thoại.`);
+      return;
+    }
+
     const prev = readJson(cfg.stateFile, null);
     const watch = new Set(readJson(WATCHLIST_FILE, []));
+    // đọc/kiểm tra mọi file cần dùng TRƯỚC khi mở hội thoại: file hỏng thì dừng khi chưa tin nào bị đánh dấu đã đọc
+    const me = readJson(cfg.meFile, { aliases: [], keywords: [] });
+    tracking.preflight();
     const ALERT_MIN = Number(process.env.UNREAD_ALERT_MIN || 30); // cảnh báo tin THEO DÕI chưa đọc quá N phút
     const state = prev ? { ...prev } : {}; // giữ mục cũ: danh sách virtualized chỉ render ~15 hàng
     const fresh = [];
@@ -146,7 +140,7 @@ async function scrape(page) {
       }
       state[key] = { name: r.name, sig, preview: r.preview, unread: r.unread, unreadCount: r.unreadCount,
                      unreadSince, alerted: didAlert || false, seenAt: now(),
-                     lastMsgTs: old && old.lastMsgTs };
+                     lastMsgTs: old && old.lastMsgTs, gapTries: old && old.gapTries };
     }
     // ---- Mở các hội thoại THEO DÕI vừa có tin mới để đọc đầy đủ nội dung (không chỉ dòng xem trước) ----
     // Hệ quả đã được chấp nhận: Zalo đánh dấu các tin đó là ĐÃ ĐỌC và gửi "đã xem" cho người gửi.
@@ -169,11 +163,25 @@ async function scrape(page) {
           continue;
         }
         // đã mở hội thoại -> Zalo coi là đã đọc: đồng bộ trạng thái để lần quét sau không báo "đã đọc" giả
-        const top = c.messages.length ? c.messages[c.messages.length - 1].ts : state[key].lastMsgTs;
-        Object.assign(state[key], { unread: false, unreadCount: 0, unreadSince: null, alerted: false, lastMsgTs: top });
+        let top = c.messages.length ? c.messages[c.messages.length - 1].ts : state[key].lastMsgTs;
+        let gapTries = 0;
+        if (c.incomplete) {
+          // chưa tải được hết tin cũ: giữ mốc cũ để lần sau (khi có tin mới) đọc lại, tối đa MAX_GAP_TRIES lần
+          const tries = (state[key].gapTries || 0) + 1;
+          const retry = !!c.sinceTs && tries < MAX_GAP_TRIES;
+          if (retry) { top = c.sinceTs; gapTries = tries; }
+          const msg = `${now()} CẢNH BÁO: "${key.split('|')[0]}" chưa tải hết tin cũ, có thể thiếu tin. ` +
+            (retry ? `Giữ mốc cũ, đọc lại khi có tin mới (lần ${tries}/${MAX_GAP_TRIES}).` : 'Không đọc lại, hãy mở Zalo để xem.');
+          fs.appendFileSync(path.join(cfg.logDir, 'errors.log'), msg + '\n');
+          console.error(msg);
+        }
+        Object.assign(state[key], { unread: false, unreadCount: 0, unreadSince: null, alerted: false, lastMsgTs: top, gapTries });
       }
     }
-    fs.writeFileSync(cfg.stateFile, JSON.stringify(state, null, 2));
+    // Thứ tự bắt buộc: lưu NỘI DUNG tin (tracking) trước, rồi mới đẩy mốc trong state.json.
+    // Nếu lưu nội dung lỗi, mốc cũ được giữ và lần quét sau đọc lại.
+    const tr = tracking.update({ rows, watchNames: [...watch], me, events: { fresh, reads, chats }, nowIso: now() });
+    writeJson(cfg.stateFile, state);
 
     const logTo = (file, o) => fs.appendFileSync(path.join(cfg.logDir, file), JSON.stringify(o) + '\n');
     if (!prev) {
@@ -199,9 +207,6 @@ async function scrape(page) {
         console.log(`${now()} Không có thay đổi (${rows.length} hội thoại).`);
       }
     }
-    // cập nhật data/tracking/index.html + file từng đối tượng (người dùng đọc)
-    const me = readJson(cfg.meFile, { aliases: [], keywords: [] });
-    const tr = tracking.update({ rows, watchNames: [...watch], me, events: { fresh, reads, chats }, nowIso: now() });
     console.log(`    -> data/tracking/index.html: ${tr.count} đối tượng, ${tr.unread} tin mới trong 24 giờ`);
     if (process.env.DEBUG_ROWS) console.log(JSON.stringify(rows, null, 1));
   } finally {

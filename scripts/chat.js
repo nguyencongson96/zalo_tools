@@ -11,28 +11,20 @@
 //   [id^="bb_msg_id_"]                     id tin = mốc thời gian (ms) của tin
 //   .message-sender-name-content .truncate tên người gửi (chỉ ở tin đầu của một cụm tin liền nhau trong nhóm)
 //   [id^="mtc-"]                           phần chữ của tin
+const { scrollList } = require('./list');
+
 const MAX_OPEN = 25;        // tối đa số hội thoại mở trong một lần quét
 const MAX_FIRST = 30;       // lần đầu (chưa có mốc): chỉ lấy tối đa N tin cuối
-const MAX_SCROLLS = 12;     // số lần cuộn lên để nạp tin cũ
-
-async function listScroll(page, to) {
-  return page.evaluate((to) => {
-    let el = document.querySelector('#conversationList');
-    while (el && el !== document.body) {
-      const oy = getComputedStyle(el).overflowY;
-      if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight + 5) break;
-      el = el.parentElement;
-    }
-    if (!el || el === document.body) return { ok: false, moved: false };
-    const before = el.scrollTop;
-    el.scrollTop = to === 'top' ? 0 : before + Math.max(200, el.clientHeight * 0.6);
-    return { ok: true, moved: el.scrollTop !== before };
-  }, to);
-}
+// Nạp tin cũ: giới hạn theo thời gian (không theo số lần cuộn), nằm trong giới hạn 20 phút của tác vụ ZaloCheck
+const LOAD_WAIT_MS = 5000;        // chờ tối đa mỗi lần Zalo nạp thêm tin cũ
+const MAX_STALLS = 2;             // số lần liên tiếp không nạp thêm được gì thì dừng
+const CHAT_BUDGET_MS = 30000;     // tổng thời gian nạp tin cũ cho một hội thoại
+const SCAN_BUDGET_MS = 8 * 60000; // hết khoảng này kể từ khi bắt đầu mở thì các hội thoại sau không nạp tin cũ nữa
+const MAX_SWEEP = 600;            // số bước tối đa khi cuộn ngược xuống để gom tin
 
 // Tìm hàng đúng TÊN (khớp chính xác) trong danh sách và bấm vào. Trả về true nếu mở đúng hội thoại.
 async function openConversation(page, name, uid) {
-  await listScroll(page, 'top');
+  await scrollList(page, 'top');
   await page.waitForTimeout(400);
   let found = false;
   for (let i = 0; i < 60 && !found; i++) {
@@ -49,7 +41,7 @@ async function openConversation(page, name, uid) {
       return false;
     }, { name, uid });
     if (found) break;
-    const s = await listScroll(page, 'down');
+    const s = await scrollList(page, 'down');
     await page.waitForTimeout(s.moved ? 350 : 900);
     if (!s.moved && i > 6) break;
   }
@@ -90,7 +82,7 @@ function extractMessages(page, isGroup) {
         else {
           const ma = it.querySelector('.message-action') || it;
           const cls = new Set();
-          ma.querySelectorAll('[class]').forEach((e) => String(e.className).split(/s+/).forEach((c) => c && cls.add(c)));
+          ma.querySelectorAll('[class]').forEach((e) => String(e.className).split(/\s+/).forEach((c) => c && cls.add(c)));
           const all = [...cls].join(' ');
           hint = [...cls].filter((c) => !/^(flx|rel|abs|fa-|message-reaction|msg-reaction|reaction|emoji|react|card-send-time|floating)/.test(c)).slice(0, 10).join(' ');
           if (/file|attach|document/i.test(all)) { kind = 'file'; text = '[Tệp đính kèm]'; }
@@ -109,50 +101,79 @@ function extractMessages(page, isGroup) {
   }, isGroup);
 }
 
-// Cuộn khung chat lên đầu để nạp tin cũ hơn; trả về false nếu không còn gì để nạp
-function scrollChatUp(page) {
-  return page.evaluate(() => {
+// Cuộn khung chat. to: 'top' (nạp tin cũ) | 'nudge' (nhích xuống để Zalo nhận lại sự kiện cuộn) | 'down'
+function scrollChat(page, to) {
+  return page.evaluate((to) => {
     let el = document.querySelector('#messageViewScroll');
     while (el && el !== document.body) {
       const oy = getComputedStyle(el).overflowY;
       if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight + 5) break;
       el = el.parentElement;
     }
-    if (!el || el === document.body) return false;
+    if (!el || el === document.body) return { moved: false };
     const before = el.scrollTop;
-    el.scrollTop = 0;
-    return before > 0;
-  });
+    if (to === 'top') el.scrollTop = 0;
+    else if (to === 'nudge') el.scrollTop = 60;
+    else el.scrollTop = before + Math.max(100, el.clientHeight * 0.7);
+    return { moved: el.scrollTop !== before };
+  }, to);
 }
 
 // Đọc các tin mới của một hội thoại. sinceTs: mốc tin đã biết (ms); không có thì lấy vài tin cuối.
-async function readOne(page, t) {
+// incomplete = true khi dừng mà chưa tải được tới mốc (hoặc chưa đủ số tin cần): có thể thiếu tin.
+async function readOne(page, t, scanDeadline) {
   const ok = await openConversation(page, t.name, t.uid);
   if (!ok) return { messages: [], error: 'không tìm thấy hội thoại trong danh sách' };
   const all = new Map();
-  const merge = (arr) => arr.forEach((m) => all.set(m.ts, m));
-  merge(await extractMessages(page, t.isGroup));
-  const want = t.sinceTs ? 0 : Math.max(t.unreadCount || 1, 1);
-  for (let i = 0; i < MAX_SCROLLS; i++) {
-    const min = Math.min(...all.keys());
-    if (t.sinceTs ? min <= t.sinceTs : all.size >= Math.min(want, MAX_FIRST) + 1) break;
-    const could = await scrollChatUp(page);
-    await page.waitForTimeout(900);
-    const before = all.size;
-    merge(await extractMessages(page, t.isGroup));
-    if (!could && all.size === before) break;
-    if (all.size === before && i > 1) break;
+  const grab = async () => {
+    for (const m of await extractMessages(page, t.isGroup)) {
+      const old = all.get(m.ts);
+      if (old && m.from === 'unknown') m.from = old.from; // đừng làm mất tên người gửi đã đọc được
+      all.set(m.ts, m);
+    }
+  };
+  await grab();
+  const want = t.sinceTs ? 0 : Math.min(Math.max(t.unreadCount || 1, 1), MAX_FIRST);
+  const oldest = () => (all.size ? Math.min(...all.keys()) : Infinity);
+  const reached = () => (t.sinceTs ? oldest() <= t.sinceTs : all.size >= want);
+  // chưa có mốc thì nạp dư một tin để biết người gửi của tin cũ nhất cần lấy
+  const enough = () => (t.sinceTs ? reached() : all.size >= want + 1);
+
+  // 1) cuộn lên đầu, CHỜ tới khi có tin cũ hơn xuất hiện, lặp tới khi đủ
+  const deadline = Math.min(Date.now() + CHAT_BUDGET_MS, scanDeadline);
+  let stalls = 0;
+  let scrolled = false;
+  while (!enough() && stalls < MAX_STALLS && Date.now() < deadline) {
+    const before = oldest();
+    // đang ở sẵn đầu khung thì "cuộn lên đầu" không phát sự kiện cuộn: luôn nhích xuống trước
+    await scrollChat(page, 'nudge');
+    await page.waitForTimeout(150);
+    await scrollChat(page, 'top');
+    scrolled = true;
+    const until = Math.min(Date.now() + LOAD_WAIT_MS, deadline);
+    do { await page.waitForTimeout(300); await grab(); } while (oldest() >= before && Date.now() < until);
+    stalls = oldest() < before ? 0 : stalls + 1;
   }
+  // 2) cuộn dần xuống cuối để gom các tin ở giữa (khung chat có thể chỉ vẽ phần đang nhìn thấy)
+  let swept = !scrolled;
+  for (let i = 0; !swept && i < MAX_SWEEP; i++) {
+    const s = await scrollChat(page, 'down');
+    if (s.moved) await page.waitForTimeout(250);
+    await grab();
+    swept = !s.moved;
+  }
+
   let msgs = [...all.values()].sort((a, b) => a.ts - b.ts);
-  msgs = t.sinceTs ? msgs.filter((m) => m.ts > t.sinceTs) : msgs.slice(-Math.min(want, MAX_FIRST));
-  return { messages: msgs };
+  msgs = t.sinceTs ? msgs.filter((m) => m.ts > t.sinceTs) : msgs.slice(-want);
+  return { messages: msgs, sinceTs: t.sinceTs, incomplete: !reached() || !swept };
 }
 
-// targets: [{ key, name, uid, isGroup, sinceTs, unreadCount }]  ->  { [key]: { messages, error? } }
+// targets: [{ key, name, uid, isGroup, sinceTs, unreadCount }]  ->  { [key]: { messages, sinceTs, incomplete, error? } }
 async function readChats(page, targets) {
   const res = {};
+  const scanDeadline = Date.now() + SCAN_BUDGET_MS;
   for (const t of targets.slice(0, MAX_OPEN)) {
-    try { res[t.key] = await readOne(page, t); }
+    try { res[t.key] = await readOne(page, t, scanDeadline); }
     catch (e) { res[t.key] = { messages: [], error: String(e.message || e).split('\n')[0] }; }
   }
   for (const t of targets.slice(MAX_OPEN)) res[t.key] = { messages: [], error: `vượt giới hạn ${MAX_OPEN} hội thoại mỗi lần quét` };

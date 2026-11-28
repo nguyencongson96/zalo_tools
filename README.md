@@ -264,6 +264,7 @@ Mọi thứ trên đều có thể làm bằng lệnh, chạy từ thư mục g�
 | Cài thư viện | `npm install` |
 | Đăng nhập (quét QR rồi đóng cửa sổ) | `node scripts/login.js` |
 | Quét một lần | `node scripts/check.js` (thêm biến `HEADED=1` để hiện cửa sổ, `DEBUG_ROWS=1` để in dữ liệu thô) |
+| Chỉ kiểm tra đăng nhập (không mở cuộc trò chuyện, không ghi dữ liệu theo dõi) | `node scripts/check.js --verify` |
 | Dựng lại trang theo dõi (sau khi sửa `scripts/template.html`) | `node scripts/rebuild.js` |
 | Thêm vào danh sách theo dõi mọi chat có nhãn "BIDV" | `node scripts/build_watchlist.js BIDV` |
 | Đăng xuất (mặc định chỉ liệt kê) | `node scripts/logout.js` · thêm `--yes` để xóa thật · thêm `--keep-config` để giữ danh sách theo dõi |
@@ -277,7 +278,7 @@ Thêm `-DryRun` vào các lệnh `schedule.ps1` để chỉ xem trước mà kh�
 **Cấu trúc thư mục**
 
 ```
-scripts/         mã chạy: check, login, logout, build_watchlist, tracking, render, save_report, rebuild, config (.js)
+scripts/         mã chạy: check, chat, login, logout, build_watchlist, tracking, render, save_report, rebuild, config, store, list (.js)
                  template.html (giao diện trang theo dõi, KHÔNG bị xóa khi đăng xuất)
                  schedule.ps1, run_report.ps1, run_check.cmd, run_hidden.vbs
 data/            dữ liệu cá nhân của bạn (phiên đăng nhập, tin nhắn, cấu hình):

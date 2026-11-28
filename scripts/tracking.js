@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const cfg = require('./config');
 const { esc, page, mdToHtml } = require('./render');
+const { readJson, writeJson } = require('./store');
 
 const DIR = cfg.trackingDir;
 const DATA = path.join(DIR, '.data.json');
@@ -16,7 +17,6 @@ const HISTORY_MAX = 200;
 const RECENT_MS = 24 * 3600 * 1000;   // "tin mới" = tin của người khác trong 24 giờ gần nhất
 const REPORTS_MAX = 60;
 
-const readJson = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } };
 const p2 = (n) => String(n).padStart(2, '0');
 const fmt = (iso) => {
   if (!iso) return '—';
@@ -41,14 +41,17 @@ function parsePreview(preview, isGroup) {
 function relevance({ isGroup, from, text }, me) {
   if (from === 'me') return { level: 'no', why: 'Bạn là người nhắn' };
   const hay = text.toLowerCase();
-  const alias = (me.aliases || []).find((a) => a && hay.includes(a.toLowerCase()));
+  const aliases = strList(me && me.aliases);
+  const alias = aliases.find((a) => hay.includes(a.toLowerCase()));
   if (alias) return { level: 'yes', why: `nhắc tên "${alias}"` };
-  const kw = (me.keywords || []).find((k) => k && hay.includes(k.toLowerCase()));
+  const kw = strList(me && me.keywords).find((k) => hay.includes(k.toLowerCase()));
   if (kw) return { level: 'yes', why: `có từ khóa "${kw}"` };
   if (!isGroup) return { level: 'yes', why: 'tin nhắn riêng gửi cho bạn' };
-  if (!(me.aliases || []).length) return { level: 'unknown', why: 'nhóm chat, chưa khai tên trong me.json' };
+  if (!aliases.length) return { level: 'unknown', why: 'nhóm chat, chưa khai tên trong me.json' };
   return { level: 'no', why: 'tin nhóm, không nhắc đến bạn' };
 }
+// me.json do người dùng sửa tay: chấp nhận cả một chuỗi đơn ("aliases": "Son") lẫn mảng
+const strList = (v) => [].concat(v || []).filter((x) => typeof x === 'string' && x);
 const senderLabel = (from) => (from === 'me' ? 'Bạn' : from);
 
 // ---------- dựng HTML ----------
@@ -71,6 +74,8 @@ function itemHtml(e) {
   const history = e.history.length
     ? `<ul class="tl">${e.history.map((h) => h.type === 'read'
       ? `<li class="rd"><div class="when">${fmt(h.at)}</div><span class="who">Bạn đã đọc</span>${h.waitedMin != null ? ` <span class="muted">sau ${h.waitedMin} phút</span>` : ''}</li>`
+      : h.type === 'gap'
+      ? `<li class="gap"><div class="when">${fmt(h.at)}</div><span class="b amb">Có thể thiếu tin</span> <span class="muted">chưa tải được tin ${h.since ? `từ ${fmt(new Date(h.since).toISOString())} ` : ''}đến ${fmt(new Date(h.to).toISOString())}, hãy mở Zalo để xem</span></li>`
       : `<li${h.from === 'me' ? ' class="mine"' : ''}><div class="when">${fmt(h.at)}${h.rel && h.from !== 'me' ? ' · ' + relBadge(h.rel, true) : ''}</div><span class="who">${esc(h.from === 'them' ? e.name : senderLabel(h.from))}</span>: <span class="txt">${esc(h.text)}</span>${h.truncated ? ' <span class="muted">(bị rút gọn)</span>' : ''}</li>`).join('')}</ul>`
     : '<p class="muted">Chưa ghi nhận tin mới nào kể từ khi bắt đầu theo dõi.</p>';
   return `<details class="item${rc.rel ? ' hot' : ''}" data-name="${esc(e.name.toLowerCase())}" data-new="${rc.n ? 1 : 0}" data-rel="${rc.rel ? 'yes' : ''}">
@@ -122,7 +127,7 @@ ${items.map(itemHtml).join('\n')}
 <div class="empty" id="none" hidden>Không có đối tượng nào khớp.</div>
 ${!items.length ? '<div class="empty">Chưa có dữ liệu. Hãy thêm đối tượng vào danh sách theo dõi rồi quét Zalo.</div>' : ''}
 ${missing.length ? `<p class="note">Chưa có dữ liệu (không nằm trong danh sách Zalo đã tải, sẽ hiện khi có tin mới): ${missing.map(esc).join(', ')}.</p>` : ''}
-<p class="note">“Liên quan đến tôi” do script đánh giá bằng quy tắc (chat riêng, nhắc tên, từ khóa trong <code>me.json</code>), chỉ mang tính gợi ý. Nội dung tin lấy từ dòng xem trước của Zalo nên có thể bị rút gọn. Trang tự tải lại mỗi phút khi bạn không mở chi tiết nào.</p>`;
+<p class="note">“Liên quan đến tôi” do script đánh giá bằng quy tắc (chat riêng, nhắc tên, từ khóa trong <code>me.json</code>), chỉ mang tính gợi ý. Khi không mở được hội thoại, nội dung tin lấy từ dòng xem trước của Zalo nên có thể bị rút gọn. Trang tự tải lại mỗi phút khi bạn không mở chi tiết nào.</p>`;
 
   const reportsPanel = days.length
     ? days.map((d, i) => {
@@ -161,8 +166,14 @@ function saveReport(date, markdown) {
   reports[date] = String(markdown).replace(/^\uFEFF/, '').trim();
   const out = {};
   for (const k of Object.keys(reports).sort().reverse().slice(0, REPORTS_MAX).sort()) out[k] = reports[k];
-  fs.writeFileSync(REPORTS, JSON.stringify(out, null, 2));
+  writeJson(REPORTS, out);
   return rebuild();
+}
+
+// Đọc thử kho dữ liệu; ném lỗi nếu file hỏng (check.js gọi trước khi mở hội thoại)
+function preflight() {
+  readJson(DATA, {});
+  readJson(REPORTS, {});
 }
 
 function update({ rows, watchNames, me, events, nowIso }) {
@@ -189,6 +200,19 @@ function update({ rows, watchNames, me, events, nowIso }) {
         return { at: new Date(m.ts).toISOString(), type: "msg", id: m.ts, from: m.from, text: m.text, kind: m.kind, rel: rl.level, why: rl.why };
       });
       e.history = [...full.reverse(), ...e.history];   // mới nhất lên đầu
+      // đánh dấu khoảng có thể thiếu tin; đọc lại được tới mốc thì gỡ dấu
+      if (!cap.incomplete) {
+        e.history = e.history.filter((h) => !(h.type === 'gap' && cap.sinceTs && h.since >= cap.sinceTs));
+      } else if (cap.messages.length) {
+        const since = cap.sinceTs || 0;
+        const to = cap.messages[0].ts;
+        // lần đọc lại xuống sâu hơn: dấu cũ phía trên đã được lấp một phần, thay bằng dấu mới
+        e.history = e.history.filter((h) => !(h.type === 'gap' && h.since === since && h.to > to));
+        // tin cũ nhất lần này đã lưu từ trước = nối vào đoạn cũ, dấu cũ (nếu có) vẫn đúng chỗ
+        if (!have.has(to)) {
+          e.history.push({ type: 'gap', at: new Date(to - 1).toISOString(), since, to });   // nằm ngay dưới tin cũ nhất đọc được
+        }
+      }
       e.history.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
       if (cap.messages.length) {
         const top = cap.messages[cap.messages.length - 1];
@@ -215,7 +239,7 @@ function update({ rows, watchNames, me, events, nowIso }) {
   // đối tượng không có trong lần quét này (cuộn ra ngoài vùng hiển thị): giữ dữ liệu cũ
   const seenKeys = new Set(rows.map((r) => `${r.name}|${r.uid}`));
   for (const [k, e] of Object.entries(data)) if (!seenKeys.has(k)) e.inList = false;
-  fs.writeFileSync(DATA, JSON.stringify(data, null, 2));
+  writeJson(DATA, data);
 
   // dọn file của phiên bản cũ (mỗi đối tượng một .md/.html): nay chỉ còn index.html
   for (const f of fs.readdirSync(DIR)) {
@@ -224,4 +248,4 @@ function update({ rows, watchNames, me, events, nowIso }) {
   return rebuild({ watchNames: [...watched], nowIso });
 }
 
-module.exports = { update, rebuild, saveReport };
+module.exports = { update, rebuild, saveReport, preflight };

@@ -13,7 +13,7 @@ description: Thiết lập toàn bộ theo dõi Zalo từ đầu theo trình t�
 0. Kiểm tra môi trường
 1. zalo_login      - đăng nhập bằng QR
 2. zalo_watchlist  - chọn đối tượng theo dõi, khai tên của tôi
-3. zalo_check      - quét lần đầu, lưu mốc
+3. zalo_check      - quét, dựng bảng theo dõi
 4. Hỏi: bật quét tự động?    -> zalo_schedule (hỏi chu kỳ)
 5. Hỏi: có báo cáo cuối ngày? -> nếu có, hỏi giờ -> zalo_schedule (báo cáo) -> zalo_report
 6. Tóm tắt những gì đã bật và cách tắt
@@ -28,29 +28,30 @@ description: Thiết lập toàn bộ theo dõi Zalo từ đầu theo trình t�
 
 ## Bước 1 - Đăng nhập
 
-Làm theo [zalo_login](../zalo_login/SKILL.md): mở cửa sổ, người dùng quét QR rồi đóng cửa sổ, xác minh bằng `scripts/check.js`. Đã có `data/profile/` thì hỏi "đăng nhập lại hay giữ phiên hiện tại"; mặc định giữ nếu `scripts/check.js` vẫn đọc được danh sách.
+Làm theo [zalo_login](../zalo_login/SKILL.md): mở cửa sổ, người dùng quét QR rồi đóng cửa sổ, xác minh bằng `node scripts/check.js --verify` (không mở hội thoại). Đã có `data/profile/` thì hỏi "đăng nhập lại hay giữ phiên hiện tại"; mặc định giữ nếu lệnh `--verify` thoát mã 0.
 
 ## Bước 2 - Danh sách theo dõi
 
 Làm theo [zalo_watchlist](../zalo_watchlist/SKILL.md):
-- Hỏi theo dõi những ai: nhập tên, hoặc lấy theo thẻ phân loại của Zalo (liệt kê các thẻ nếu người dùng chưa biết).
+- Chưa có `data/state.json` (cần để xác minh tên): chạy `node scripts/check.js` một lần. Lần đầu chỉ lưu mốc, không mở hội thoại nào.
+- Hỏi theo dõi những ai: nhập tên, hoặc lấy theo thẻ phân loại của Zalo (người dùng xem tên thẻ trong menu "Phân loại" trên Zalo; công cụ không liệt kê được các thẻ).
 - Hỏi tên của họ trong các nhóm và từ khóa quan tâm để điền `data/me.json`; không đoán.
 - Cho xem danh sách cuối cùng và xác nhận.
 
-## Bước 3 - Quét lần đầu
+## Bước 3 - Quét và dựng bảng theo dõi
 
-Làm theo [zalo_check](../zalo_check/SKILL.md). Giải thích: lần đầu chỉ lưu mốc, chưa báo tin nào; từ lần sau mới phát hiện thay đổi. Cho người dùng biết bảng ở `data/tracking/index.html`.
+Trước khi chạy, nói rõ: hội thoại theo dõi có tin mới kể từ mốc sẽ được mở để đọc (Zalo đánh dấu đã đọc, người gửi thấy "đã xem"). Rồi làm theo [zalo_check](../zalo_check/SKILL.md). Tin đến trước mốc không được báo. Cho người dùng biết bảng ở `data/tracking/index.html`.
 
 ## Bước 4 - Quét tự động
 
-Hỏi: "Bạn có muốn bật quét Zalo tự động không?" (Có / Không, để sau). Nếu có, chuyển sang [zalo_schedule](../zalo_schedule/SKILL.md): hỏi chu kỳ (đề xuất 5 phút, người dùng có thể chọn khác), nêu đủ điều cần xác nhận và chỉ đăng ký khi họ đồng ý. Nói rõ tác vụ này chạy `scripts/check.js` trực tiếp, không dùng Claude, không tốn token.
+Hỏi: "Bạn có muốn bật quét Zalo tự động không?" (Có / Không, để sau). Nếu có, chuyển sang [zalo_schedule](../zalo_schedule/SKILL.md): hỏi chu kỳ (đề xuất 5 phút, người dùng có thể chọn khác), nêu đủ điều cần xác nhận và chỉ đăng ký khi họ đồng ý. Nói rõ tác vụ này chạy `scripts/check.js` trực tiếp, không dùng Claude, không tốn token; và mỗi lần quét, hội thoại theo dõi có tin mới bị tự mở (đã đọc, người gửi thấy "đã xem"), kể cả khi người dùng không ngồi ở máy.
 
 ## Bước 5 - Báo cáo cuối ngày
 
 Hỏi: "Bạn có cần báo cáo Zalo cuối ngày không?" Nếu có:
 1. Hỏi giờ muốn nhận (dạng `HH:mm`, ví dụ 18:00).
-2. Nói rõ báo cáo dùng Claude nên tốn token và gửi nội dung `data/tracking/` lên Claude; có trần 1 USD mỗi lần.
-3. Nếu chưa bật quét tự động ở bước 4, nhắc rằng báo cáo sẽ tự quét lại trước khi lập nếu dữ liệu cũ hơn 10 phút, nhưng như vậy không bắt được tin theo thời gian thực.
+2. Nói rõ báo cáo dùng Claude nên tốn token và gửi nội dung tin nhắn cùng cấu hình trong `data/` (tracking, nhật ký, `me.json`) lên Claude; có trần 1 USD mỗi lần.
+3. Nói rõ nếu dữ liệu cũ hơn 10 phút, tác vụ báo cáo tự quét trước khi lập, và lần quét đó cũng mở hội thoại theo dõi có tin mới như ở bước 4. Nếu chưa bật quét tự động, nhắc thêm rằng chỉ quét lúc báo cáo thì không bắt được tin theo thời gian thực.
 4. Đăng ký qua [zalo_schedule](../zalo_schedule/SKILL.md) khi người dùng đồng ý.
 5. Đề nghị xem thử một báo cáo ngay bằng [zalo_report](../zalo_report/SKILL.md) (chế độ tương tác) để họ biết sẽ nhận được gì.
 
@@ -59,7 +60,7 @@ Người dùng chọn không báo cáo thì bỏ qua, không gợi lại.
 ## Bước 6 - Tóm tắt
 
 Ghi lại cho người dùng:
-- Đã đăng nhập tài khoản nào (chỉ nói "đã đăng nhập", không tự nêu thông tin cá nhân khác).
+- Trạng thái đăng nhập (chỉ nói "đã đăng nhập", không tự nêu thông tin cá nhân).
 - Số đối tượng đang theo dõi.
 - Quét tự động: tắt hay mỗi N phút. Báo cáo cuối ngày: tắt hay lúc HH:mm.
 - Nơi xem: `data/tracking/index.html` (tab "Theo dõi" và tab "Báo cáo").
