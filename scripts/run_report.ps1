@@ -1,4 +1,4 @@
-# Bao cao Zalo cuoi ngay: goi Claude (claude -p) chay skill zalo_report, dua vao tab "Bao cao" cua data\tracking\index.html.
+# Bao cao Zalo cuoi ngay: goi Claude (claude -p) chay skill zalo_report, luu vao trang "Bao cao" cua giao dien.
 # Duoc Task Scheduler goi (tac vu ZaloReport) qua run_hidden.vbs. Co the chay tay:  powershell -File run_report.ps1
 #   -DryRun : chi in ra se lam gi, KHONG goi Claude
 # Claude chi duoc cap quyen DOC (Read, Glob, Grep, Skill) va gioi han ngan sach; file bao cao do script nay ghi.
@@ -39,7 +39,7 @@ if (-not $claude) {
 }
 
 $today = Get-Date -Format 'yyyy-MM-dd'
-$outFile = Join-Path $root 'data\tracking\index.html'   # bao cao duoc dua vao tab "Bao cao" cua trang nay
+$outFile = Join-Path $root 'data\tracking\.reports.json'   # save_report.js ghi file nay, giao dien doc tu day
 $prompt = "Run the zalo_report skill in NON-INTERACTIVE mode for today ($today). Read-only: do not scan Zalo and do not ask questions. " +
           "Print ONLY the final report as Markdown in Vietnamese to stdout."
 # Noi dung tin Zalo la du lieu khong tin cay: --tools gioi han cong cu co san (allowedTools chi duyet truoc,
@@ -48,7 +48,7 @@ $readTools = 'Read,Glob,Grep,Skill'
 $claudeArgs = @('-p', $prompt, '--tools', $readTools, '--allowedTools', $readTools, '--strict-mcp-config',
                 '--max-budget-usd', $budget, '--output-format', 'text')
 
-# do tuoi du lieu theo .data.json: chi lan quet (check.js) ghi file nay, rebuild.js va save_report.js thi khong
+# do tuoi du lieu theo .data.json: chi lan quet (check.js) ghi file nay, save_report.js thi khong
 $dataFile = Join-Path $root 'data\tracking\.data.json'
 $needScan = (-not (Test-Path $dataFile)) -or (((Get-Date) - (Get-Item $dataFile -Force).LastWriteTime).TotalMinutes -gt $staleMin)
 
@@ -74,7 +74,7 @@ try {
     Write-Log "LOI: claude tra ve ma $LASTEXITCODE hoac rong."
     exit 1
   }
-  # Claude tra ve Markdown; save_report.js doi sang trang HTML de nguoi dung mo bang trinh duyet
+  # Claude tra ve Markdown; save_report.js luu vao kho bao cao de giao dien hien thi
   $tmp = Join-Path ([IO.Path]::GetTempPath()) "zalo_report_$today.md"
   [IO.File]::WriteAllText($tmp, $text + "`n", (New-Object Text.UTF8Encoding($false)))
   try {

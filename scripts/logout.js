@@ -1,8 +1,8 @@
 // Đăng xuất cục bộ + dọn dữ liệu của tài khoản Zalo hiện tại.
 //   node scripts/logout.js                 -> chỉ LIỆT KÊ sẽ xóa gì (dry run, không xóa)
 //   node scripts/logout.js --yes           -> gỡ tác vụ tự động rồi xóa phiên đăng nhập + dữ liệu theo dõi
-//   node scripts/logout.js --yes --keep-config  -> giữ lại watchlist.json và me.json (cấu hình người dùng)
-// Chỉ xóa bên trong data/. Không động tới mã nguồn, scripts/template.html, node_modules, .claude. Không mở trình duyệt.
+//   node scripts/logout.js --yes --keep-config  -> giữ lại watchlist.json, me.json, groups.json (cấu hình người dùng)
+// Chỉ xóa bên trong data/. Không động tới mã nguồn, src/, dist/, node_modules, .claude. Không mở trình duyệt.
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
@@ -17,13 +17,16 @@ const targets = [
   { p: cfg.stateFile, what: 'trạng thái lần quét trước (data/state.json)' },
   { p: cfg.logDir, what: 'nhật ký (data/log/)' },
   { p: cfg.trackingDir, what: 'dữ liệu theo dõi và báo cáo (data/tracking/)' },
+  { p: cfg.conversationsFile, what: 'danh sách hội thoại (data/conversations.json)' },
+  { p: cfg.groupIndexFile, what: 'số thứ tự khi gom nhóm (data/group_index.json)' },
 ];
 if (!keepConfig) {
   targets.push({ p: cfg.watchlistFile, what: 'danh sách theo dõi (data/watchlist.json)' });
   targets.push({ p: cfg.meFile, what: 'thông tin cá nhân (data/me.json)' });
+  targets.push({ p: cfg.groupsFile, what: 'nhóm hội thoại (data/groups.json)' });
 }
 
-// Chốt an toàn: chỉ được xóa thứ nằm TRONG data/. Mã nguồn, scripts/template.html, .claude/ ... không bao giờ bị đụng tới.
+// Chốt an toàn: chỉ được xóa thứ nằm TRONG data/. Mã nguồn, src/, .claude/ ... không bao giờ bị đụng tới.
 const inData = (p) => { const r = path.relative(cfg.dataDir, p); return r && !r.startsWith("..") && !path.isAbsolute(r); };
 for (const t of targets) if (!inData(t.p)) { console.error("Từ chối: đường dẫn nằm ngoài data/:", t.p); process.exit(1); }
 const present = targets.filter((t) => fs.existsSync(t.p));

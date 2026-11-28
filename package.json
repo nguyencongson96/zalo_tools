@@ -1,8 +1,16 @@
 {
   "name": "zalo_tools",
+  "private": true,
   "version": "1.0.0",
-  "main": "index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19"
+  },
   "scripts": {
+    "ui": "node scripts/server.js --open",
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint src vite.config.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -10,6 +18,32 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "playwright-core": "^1.65.1"
+    "@ant-design/cssinjs": "^2.0.3",
+    "@ant-design/icons": "^6.1.0",
+    "@tailwindcss/vite": "^4.1.14",
+    "antd": "^6.2.0",
+    "axios": "^1.12.2",
+    "dayjs": "^1.11.18",
+    "playwright-core": "^1.65.1",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^7.12.0",
+    "tailwindcss": "^4.1.14",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.36.0",
+    "@types/node": "^24.6.0",
+    "@types/react": "^19.1.16",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react-swc": "^4.1.0",
+    "eslint": "^9.36.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.22",
+    "globals": "^16.4.0",
+    "less": "^4.5.1",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.45.0",
+    "vite": "^7.1.7"
   }
 }

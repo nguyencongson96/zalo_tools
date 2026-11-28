@@ -12,7 +12,7 @@ description: Lập báo cáo từ dữ liệu theo dõi Zalo đã thu thập (tr
 ## Hai chế độ
 
 - **Tương tác** (người dùng hỏi trực tiếp): được hỏi lại khung thời gian; hỏi có muốn lưu báo cáo không.
-- **Không tương tác**: prompt có cụm `NON-INTERACTIVE` (do tác vụ ZaloReport gọi). Không hỏi gì, không ghi file; **chỉ in báo cáo cuối cùng** ra đầu ra chuẩn bằng Markdown tiếng Việt. Script `scripts/run_report.ps1` đưa Markdown đó vào tab "Báo cáo" của trang `data/tracking/index.html` (qua `scripts/save_report.js`). Ở chế độ này chỉ dùng công cụ đọc (Read, Glob, Grep).
+- **Không tương tác**: prompt có cụm `NON-INTERACTIVE` (do tác vụ ZaloReport gọi). Không hỏi gì, không ghi file; **chỉ in báo cáo cuối cùng** ra đầu ra chuẩn bằng Markdown tiếng Việt. Script `scripts/run_report.ps1` lưu Markdown đó qua `scripts/save_report.js`; giao diện hiện ở trang "Báo cáo". Ở chế độ này chỉ dùng công cụ đọc (Read, Glob, Grep).
 
 ## Quy tắc an toàn
 
@@ -23,11 +23,11 @@ description: Lập báo cáo từ dữ liệu theo dõi Zalo đã thu thập (tr
 
 | File | Nội dung |
 |---|---|
-| `data/tracking/index.html` | Bảng tổng hợp (HTML); dòng phụ đề đầu trang có "Cập nhật lúc" (giờ máy). Đây là trang HTML cho người xem; để phân tích nên đọc `.data.json` bên dưới |
 | `data/tracking/.data.json` | Dữ liệu có cấu trúc theo từng đối tượng: `name`, `isGroup`, `unread`, `unreadCount`, `muted`, `last`, `lastRead`, `lastMsgTs`, `history[]` (tối đa 200 mục, mới nhất trước: `type` = `msg`, `read` hoặc `gap` (có thể thiếu tin giữa `since` và `to`, mốc ms; `since` = 0 là không rõ điểm bắt đầu); tin có `at`, `from` (`me` = người dùng, `them` = người kia trong chat riêng, tên người gửi trong nhóm, hoặc `unknown`), `text`, `rel`, `why`; mục `read` có `waitedMin`). Tin **có `id`** được đọc từ trong hội thoại: `at` là giờ nhắn thật, có `kind` (`text`/`sticker`/`photo`/`file`/...). Tin **không có `id`** lấy từ dòng xem trước (khi không mở được hội thoại): `at` là **giờ quét**, nội dung có thể bị cắt (`truncated`). `unread`/`unreadCount` luôn gần như 0 với hội thoại theo dõi vì công cụ tự mở chúng |
 | `data/log/new_messages.jsonl`, `data/log/read_events.jsonl`, `data/log/overdue.jsonl` | Nhật ký sự kiện. Gồm **mọi** hội thoại, kể cả ngoài danh sách theo dõi |
 | `data/me.json` | Tên và từ khóa của người dùng |
 | `data/watchlist.json` | Các đối tượng đang theo dõi |
+| `data/groups.json` | Nhóm do người dùng tự đặt (`[{ name, chats }]`), có thể chưa có |
 
 Mọi mốc thời gian `at` trong file là ISO UTC (kết thúc bằng `Z`): **đổi sang giờ máy** (giờ Việt Nam là UTC+7) trước khi so với "hôm nay" hay hiển thị.
 
@@ -46,6 +46,8 @@ Mọi mốc thời gian `at` trong file là ISO UTC (kết thúc bằng `Z`): **
    Không liên quan: tin do chính người dùng nhắn, thông báo chung, trò chuyện không dính tới họ. Tin chỉ có hình ảnh, sticker hoặc bị cắt cụt không đủ để kết luận thì ghi **"chưa rõ"**, đừng đoán.
    Mỗi đánh giá kèm lý do trong một mệnh đề ngắn.
 5. **Đã trả lời chưa.** Không dựa vào đã đọc hay chưa đọc (công cụ tự mở hội thoại). Xét thứ tự thời gian: tin liên quan mà sau đó hội thoại chưa có tin `from` = `me` thì xếp vào "Cần xử lý". Có tin của người dùng sau đó thì xếp vào "Có thể đã trả lời" (trong nhóm, tin đó có thể trả lời người khác): chỉ nói "có thể", không khẳng định.
+
+6. **Theo nhóm.** Có `data/groups.json` thì trong mỗi mục ghi nhóm của hội thoại (ví dụ `[Khách hàng]`) và xếp các hội thoại cùng nhóm cạnh nhau. Người dùng hỏi riêng một nhóm ("báo cáo nhóm Khách hàng") thì chỉ lấy hội thoại của nhóm đó mà đang được theo dõi.
 
 ## Cấu trúc báo cáo (tiếng Việt, Markdown)
 
@@ -74,11 +76,11 @@ Không có tin nào trong khung: nói thẳng "không có tin mới" kèm thời
 
 ## Lưu báo cáo (chế độ tương tác)
 
-Chỉ lưu khi người dùng muốn. Báo cáo được thêm vào tab "Báo cáo" của **một trang HTML duy nhất** `data/tracking/index.html` để người dùng mở bằng trình duyệt (không cần app đọc Markdown):
+Chỉ lưu khi người dùng muốn. Báo cáo hiện ở trang "Báo cáo" của giao diện theo dõi:
 
 1. Ghi báo cáo Markdown vừa viết ra một file tạm ngoài thư mục dữ liệu (ví dụ trong thư mục tạm của hệ thống hoặc scratchpad).
-2. Chạy (từ gốc project): `node scripts/save_report.js <yyyy-MM-dd> <đường-dẫn-file-tạm>`. Script lưu báo cáo vào `data/tracking/.reports.json` (cùng ngày thì ghi đè) và dựng lại `data/tracking/index.html`.
+2. Chạy (từ gốc project): `node scripts/save_report.js <yyyy-MM-dd> <đường-dẫn-file-tạm>`. Script lưu báo cáo vào `data/tracking/.reports.json` (cùng ngày thì ghi đè).
 3. Xóa file tạm (nó chứa nội dung tin nhắn), kể cả khi lưu lỗi và không chạy lại.
-4. Nhắc người dùng bấm đúp `data/tracking/index.html` rồi chọn tab "Báo cáo".
+4. Đảm bảo giao diện đang chạy theo [zalo_ui](../zalo_ui/SKILL.md), rồi nhắc người dùng xem ở `http://127.0.0.1:4780/reports`; trang đang mở tự hiện báo cáo mới.
 
 Báo cáo chứa nội dung tin nhắn nên `data/` đã nằm trong `.gitignore`; không gửi hay đăng ở nơi khác nếu người dùng không yêu cầu. Không sửa bất kỳ file dữ liệu theo dõi nào.

@@ -55,7 +55,7 @@ switch ($Action) {
     $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) `
       -RepetitionInterval (New-TimeSpan -Minutes $Minutes) -RepetitionDuration (New-TimeSpan -Days 3650)
     # gioi han rong: moi lan quet co the mo toi 25 hoi thoai; bi cat giua chung se mat noi dung tin da mo
-    Register-Zalo $CheckTask 'run_check.cmd' $trigger (New-Settings 20)'Quet Zalo Web va cap nhat data/tracking/index.html'
+    Register-Zalo $CheckTask 'run_check.cmd' $trigger (New-Settings 20)'Quet Zalo Web va cap nhat du lieu theo doi'
     if (-not $DryRun) { Write-Host "Da bat quet tu dong moi $Minutes phut (task: $CheckTask)." }
   }
   'install-report' {

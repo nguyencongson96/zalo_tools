@@ -3,3 +3,7 @@ node_modules/
 data/
 
 .claude/skills/ui-ux-pro-max
+
+# giao diện React: bản build và file tạm của TypeScript
+dist/
+*.tsbuildinfo

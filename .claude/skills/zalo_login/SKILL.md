@@ -18,7 +18,7 @@ Mở một cửa sổ trình duyệt tới `chat.zalo.me` bằng profile riêng 
 
 ## Các bước
 
-1. **Điều kiện.** Cần Node.js 18 trở lên và thư viện đã cài:
+1. **Điều kiện.** Cần Node.js 20.19 trở lên và thư viện đã cài:
    - Kiểm tra `node_modules/playwright-core`. Chưa có thì chạy `npm install`.
    - Cần Microsoft Edge (có sẵn trên Windows 10/11). `config.js` đang chọn `msedge`; máy chỉ có Chrome thì báo người dùng, không tự đổi code.
 2. **Mở cửa sổ đăng nhập** bằng Bash, chạy nền (`run_in_background: true`):
@@ -38,7 +38,7 @@ node scripts/login.js
 node scripts/check.js --verify
 ```
 
-   Chế độ này chỉ đọc danh sách: không mở hội thoại, không ghi `data/state.json` hay bảng theo dõi. **Không** xác minh bằng lệnh thiếu `--verify`: khi đã có mốc, lần quét thường mở hội thoại theo dõi có tin mới (Zalo đánh dấu đã đọc, người gửi thấy "đã xem").
+   Chế độ này chỉ đọc danh sách: không mở hội thoại, không ghi `data/state.json` hay dữ liệu theo dõi. **Không** xác minh bằng lệnh thiếu `--verify`: khi đã có mốc, lần quét thường mở hội thoại theo dõi có tin mới (Zalo đánh dấu đã đọc, người gửi thấy "đã xem").
    - Thành công: mã thoát 0 và dòng `Đăng nhập OK: đọc được N hội thoại`. Báo "đã đăng nhập, thấy N hội thoại".
    - Mã thoát 2: chưa đăng nhập xong (chưa quét QR, hoặc đóng cửa sổ quá sớm). Hướng dẫn lại và lặp lại từ bước 2.
    - Mã khác: thường là profile đang bị giữ (cửa sổ đăng nhập chưa đóng hết, hoặc `ZaloCheck` đang chạy). Đợi rồi thử lại.
@@ -49,4 +49,4 @@ Zalo Web có thể hết hạn phiên hoặc yêu cầu quét lại QR (đổi t
 
 ## Bước tiếp theo
 
-Nếu đây là lần đầu: tiếp tục [zalo_watchlist](../zalo_watchlist/SKILL.md). Nếu chỉ đăng nhập lại: đề nghị chạy [zalo_check](../zalo_check/SKILL.md) để cập nhật dữ liệu, nói trước rằng lần quét này có thể mở hội thoại theo dõi có tin mới.
+Nếu đây là lần đầu: tiếp tục [zalo_group](../zalo_group/SKILL.md) hoặc [zalo_watchlist](../zalo_watchlist/SKILL.md). Nếu chỉ đăng nhập lại: đề nghị chạy [zalo_check](../zalo_check/SKILL.md) để cập nhật dữ liệu, nói trước rằng lần quét này có thể mở hội thoại theo dõi có tin mới.

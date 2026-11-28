@@ -7,7 +7,7 @@ description: Quản lý danh sách đối tượng Zalo cần theo dõi (data/wa
 
 > Đường dẫn trong skill này tính từ gốc project `zalo_tools` (thư mục có `package.json`, `scripts/` và `.claude/skills`).
 
-Chỉ các hội thoại nằm trong `data/watchlist.json` mới được gắn cờ `[THEO DÕI]`, vào bảng `data/tracking/` và được tự mở để đọc đầy đủ khi có tin mới (Zalo sẽ đánh dấu các tin đó là đã đọc, người gửi thấy "đã xem"). Hội thoại ngoài danh sách vẫn được quét (dòng xem trước vẫn vào nhật ký `data/log/`) nhưng không được ghi vào bảng.
+Chỉ các hội thoại nằm trong `data/watchlist.json` mới được gắn cờ `[THEO DÕI]`, được lưu lịch sử và được tự mở để đọc đầy đủ khi có tin mới (Zalo sẽ đánh dấu các tin đó là đã đọc, người gửi thấy "đã xem"). Hội thoại ngoài danh sách vẫn được quét (dòng xem trước vẫn vào nhật ký `data/log/`) nhưng không được lưu lịch sử. Phân loại thành tab là việc khác, xem [zalo_group](../zalo_group/SKILL.md).
 
 ## Hai file cấu hình
 
@@ -44,7 +44,7 @@ Script mở Zalo Web ẩn, áp bộ lọc theo thẻ, cuộn hết danh sách, t
 - `aliases`: tên người dùng được gọi trong các nhóm, đúng như hiển thị trên Zalo (ví dụ `Nguyễn Văn A`) hoặc dạng nhắc `@Văn A`. **Hỏi người dùng**, không đoán từ tên máy, email hay tên người trong tin nhắn: dòng "@Tên ..." thường là người dùng nhắc người khác.
 - `keywords`: các từ cho thấy một tin liên quan tới họ (ví dụ `hóa đơn`, `BIDV`, `báo cáo`).
 
-Tác dụng của `data/me.json` lên cột "Liên quan đến tôi" trong bảng tracking:
+Tác dụng của `data/me.json` lên đánh giá "Liên quan đến bạn" trên giao diện:
 
 | Tình huống | Kết quả |
 |---|---|
@@ -58,10 +58,4 @@ Tác dụng của `data/me.json` lên cột "Liên quan đến tôi" trong bản
 
 ## Sau khi sửa
 
-Cập nhật trang theo dõi ngay mà không mở Zalo:
-
-```bash
-node scripts/rebuild.js
-```
-
-Đối tượng đã bỏ biến mất khỏi trang; đối tượng mới chưa có dữ liệu được liệt kê ở ghi chú "Chưa có dữ liệu". Muốn có dữ liệu cho đối tượng mới thì chạy [zalo_check](../zalo_check/SKILL.md) (lần quét này có thể mở hội thoại theo dõi có tin mới). Đối tượng mới bắt đầu theo dõi từ trạng thái hiện tại, **không có lịch sử trước đó**.
+Giao diện đang mở (xem [zalo_ui](../zalo_ui/SKILL.md)) tự nhận thay đổi sau tối đa 30 giây, không cần quét: đối tượng bỏ theo dõi hiện nhãn "Không theo dõi", đối tượng mới chưa có lịch sử. Muốn có dữ liệu cho đối tượng mới thì chạy [zalo_check](../zalo_check/SKILL.md) (lần quét này có thể mở hội thoại theo dõi có tin mới). Đối tượng mới bắt đầu theo dõi từ trạng thái hiện tại, **không có lịch sử trước đó**.

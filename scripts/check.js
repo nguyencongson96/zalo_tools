@@ -3,6 +3,7 @@
 //   node scripts/check.js            -> chạy ẩn (headless)
 //   HEADED=1 node scripts/check.js   -> hiện cửa sổ để debug
 //   node scripts/check.js --verify   -> chỉ kiểm tra đăng nhập: đọc danh sách, KHÔNG mở hội thoại, không ghi state/tracking
+//   node scripts/check.js --list     -> lưu danh sách mọi hội thoại (data/conversations.json) để gom nhóm; KHÔNG mở hội thoại
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright-core');
@@ -11,6 +12,7 @@ const tracking = require('./tracking');
 const chat = require('./chat');
 const { readJson, writeJson } = require('./store');
 const { scrollThrough } = require('./list');
+const conversations = require('./conversations');
 
 const MAX_GAP_TRIES = 3; // số lần đọc lại một hội thoại khi chưa tải được tin cũ tới mốc đã đọc
 const WATCHLIST_FILE = cfg.watchlistFile; // tùy chọn: ["Tên A", "Tên B"]
@@ -62,9 +64,9 @@ async function scrape(page) {
 (async () => {
   const args = process.argv.slice(2);
   // gõ sai tham số mà vẫn quét thường thì sẽ mở hội thoại ngoài ý muốn -> dừng luôn
-  const unknown = args.filter((a) => a !== '--verify');
-  if (unknown.length) {
-    console.error(`Tham số không hợp lệ: ${unknown.join(' ')}. Chỉ hỗ trợ --verify.`);
+  const unknown = args.filter((a) => a !== '--verify' && a !== '--list');
+  if (unknown.length || args.length > 1) {
+    console.error(`Tham số không hợp lệ: ${args.join(' ')}. Chỉ hỗ trợ một trong --verify, --list.`);
     process.exitCode = 1;
     return;
   }
@@ -94,6 +96,10 @@ async function scrape(page) {
 
     if (args.includes('--verify')) {
       console.log(`${now()} Đăng nhập OK: đọc được ${rows.length} hội thoại.`);
+      return;
+    }
+    if (args.includes('--list')) {
+      console.log(`${now()} Đã lưu danh sách ${conversations.save(rows, now())} hội thoại (không mở hội thoại nào).`);
       return;
     }
 
@@ -182,6 +188,7 @@ async function scrape(page) {
     // Nếu lưu nội dung lỗi, mốc cũ được giữ và lần quét sau đọc lại.
     const tr = tracking.update({ rows, watchNames: [...watch], me, events: { fresh, reads, chats }, nowIso: now() });
     writeJson(cfg.stateFile, state);
+    conversations.save(rows, now());
 
     const logTo = (file, o) => fs.appendFileSync(path.join(cfg.logDir, file), JSON.stringify(o) + '\n');
     if (!prev) {
@@ -207,7 +214,7 @@ async function scrape(page) {
         console.log(`${now()} Không có thay đổi (${rows.length} hội thoại).`);
       }
     }
-    console.log(`    -> data/tracking/index.html: ${tr.count} đối tượng, ${tr.unread} tin mới trong 24 giờ`);
+    console.log(`    -> Đã cập nhật dữ liệu theo dõi: ${tr.count} đối tượng, ${tr.unread} tin mới trong 24 giờ`);
     if (process.env.DEBUG_ROWS) console.log(JSON.stringify(rows, null, 1));
   } finally {
     await ctx.close();

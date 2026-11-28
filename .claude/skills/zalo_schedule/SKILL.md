@@ -18,7 +18,7 @@ Quản lý hai tác vụ qua `scripts/schedule.ps1`. Cả hai đều chạy ng�
 
 **Hệ quả của việc quét:** hội thoại theo dõi có tin mới bị tự mở để đọc, nên Zalo đánh dấu đã đọc và người gửi thấy "đã xem", kể cả khi người dùng không ngồi ở máy. Áp dụng cho `ZaloCheck` và cho lần quét trước báo cáo của `ZaloReport`.
 
-Tác vụ chỉ ghi dữ liệu trong `data/`; **không có thông báo đẩy** tới người dùng. Muốn xem thì mở `data/tracking/index.html` (báo cáo ở tab "Báo cáo") hoặc hỏi Claude.
+Tác vụ chỉ ghi dữ liệu trong `data/`; **không có thông báo đẩy** tới người dùng. Muốn xem thì mở giao diện ([zalo_ui](../zalo_ui/SKILL.md)) hoặc hỏi Claude. Trang đang mở tự cập nhật sau mỗi lần tác vụ chạy xong, nhưng tác vụ **không tự bật** giao diện.
 
 ## Quy tắc bắt buộc
 
@@ -76,4 +76,4 @@ Chạy lại `install-check` với số phút mới. Không cần gỡ trước.
 - Không chạy cùng lúc với cửa sổ đăng nhập Zalo hay `scripts/build_watchlist.js` (chung profile); lần quét đó sẽ ghi lỗi và lần sau thử lại.
 - Phiên Zalo hết hạn thì ZaloCheck ghi `data/log/errors.log` và dữ liệu đứng yên: dùng [zalo_login](../zalo_login/SKILL.md).
 - Kết quả lần chạy gần nhất trong `status`: `0` là thành công; `267009` là đang chạy; `267011` là chưa chạy lần nào (bình thường ngay sau khi bật). Mã khác thì báo người dùng và xem nhật ký.
-- Nhật ký: `data/log/check.log` (quét), `data/log/report.log` (báo cáo). Báo cáo nằm ở tab "Báo cáo" của `data/tracking/index.html`.
+- Nhật ký: `data/log/check.log` (quét), `data/log/report.log` (báo cáo). Báo cáo lưu ở `data/tracking/.reports.json`, xem ở trang "Báo cáo" của giao diện.

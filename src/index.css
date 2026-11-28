@@ -1,0 +1,76 @@
+@layer theme, base, antd, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+/* chỉ quét class trong src/, không quét tài liệu và script ở gốc project */
+@import "tailwindcss/utilities.css" layer(utilities) source(".");
+
+:root {
+  color-scheme: light dark;
+  --gt-font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --gt-primary-color: #0068ff;
+  --gt-primary-bg-color: #e8f1ff;
+  --gt-primary-text-color: #0052cc;
+  --gt-attention-color: #9a3412;
+  --gt-attention-bg-color: #ffedd5;
+  --gt-bg-color: #f3f5f9;
+  --gt-container-bg-color: #ffffff;
+  --gt-soft-bg-color: #f7f8fb;
+  --gt-text-color: #172033;
+  --gt-muted-color: #5f6a7d;
+  --gt-border-color: #e6e9f0;
+  --gt-danger-color: #d92d20;
+  --gt-success-color: #067647;
+  --gt-warning-color: #b54708;
+  --gt-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.06);
+  --gt-radius: 14px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --gt-primary-color: #6aa6ff;
+    --gt-primary-bg-color: #172743;
+    --gt-primary-text-color: #8dbbff;
+    --gt-attention-color: #fdba74;
+    --gt-attention-bg-color: #3a2412;
+    --gt-bg-color: #0e121a;
+    --gt-container-bg-color: #161b26;
+    --gt-soft-bg-color: #1b2130;
+    --gt-text-color: #e8ebf2;
+    --gt-muted-color: #93a0b5;
+    --gt-border-color: #262d3b;
+    --gt-danger-color: #ff9b92;
+    --gt-success-color: #62e0a0;
+    --gt-warning-color: #fbc65b;
+    --gt-shadow: none;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--gt-bg-color);
+  color: var(--gt-text-color);
+  font: 15px/1.55 var(--gt-font-family);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* vòng focus rõ cho người dùng bàn phím (liên kết, nút và thẻ lọc tự dựng) */
+:where(a, button):focus-visible {
+  outline: 2px solid var(--gt-primary-color);
+  outline-offset: 2px;
+}
+
+a,
+button {
+  touch-action: manipulation;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
